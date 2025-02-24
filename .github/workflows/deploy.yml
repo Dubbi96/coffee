@@ -22,7 +22,6 @@ jobs:
       run: |
         echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > coffee-backend-key.json
         ls -l coffee-backend-key.json
-        cat coffee-backend-key.json
 
     - name: 3️⃣ Authenticate with GCP
       uses: google-github-actions/auth@v1

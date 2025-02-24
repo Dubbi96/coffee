@@ -9,15 +9,12 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
-# 서비스 계정 키 파일 복사
-#COPY blinker-backend-key.json /app/blinker-backend-key.json
-
 # 환경 변수 설정
-#ENV GOOGLE_APPLICATION_CREDENTIALS=/app/blinker-backend-key.json
-#COPY blinker-backend-key.json /app/blinker-backend-key.json
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/coffee-backend-key.json
+COPY coffee-backend-key.json /app/coffee-backend-key.json
 
 # 빌드된 JAR 파일 복사
-#COPY --from=stage1 /opt/app/target/Blinker-1.0.0.jar /app/Blinker-1.0.0.jar
+COPY --from=stage1 /opt/app/target/Coffee-1.0.0.jar /app/Coffee-1.0.0.jar
 
 ENV PORT=8080
 
