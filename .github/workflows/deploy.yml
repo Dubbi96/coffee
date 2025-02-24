@@ -35,7 +35,7 @@ jobs:
       run: docker build -t asia-northeast3-docker.pkg.dev/dubbi-coffee/coffee-repo/dubbi-coffee:latest .
 
     - name: 6️⃣ Push Docker Image to Artifact Registry
-      run: docker push asia-northeast3-docker.pkg.dev/dubbi-coffee/coffee-repo/dubbi-coffee:latest .
+      run: docker push asia-northeast3-docker.pkg.dev/dubbi-coffee/coffee-repo/dubbi-coffee:latest
 
     - name: 7️⃣ Deploy to Cloud Run
       run: |
