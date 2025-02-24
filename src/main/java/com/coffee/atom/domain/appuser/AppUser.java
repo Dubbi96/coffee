@@ -1,19 +1,12 @@
 package com.coffee.atom.domain.appuser;
 
-import com.coffee.atom.common.ApplicationContextProvider;
-import com.coffee.atom.service.scheduled.AppUserSensorGroupService;
-import io.hypersistence.utils.hibernate.type.array.ListArrayType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Parameter;
-import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "app_user")
@@ -40,15 +33,9 @@ public class AppUser {
     @Column(name = "salt", nullable = false, length = 50)
     private String salt;
 
-    @Column(name = "roles", columnDefinition = "text[]")
-    @Type(value = ListArrayType.class, parameters = {
-            @Parameter(
-                    name = ListArrayType.SQL_ARRAY_TYPE,
-                    value = "text"
-            )
-    })
-    @Builder.Default
-    private List<Role> roles = new ArrayList<>();
+    @Column(name = "role", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Role role;
 
     @Column(name = "created_at", updatable = false, nullable = false)
     @Temporal(TemporalType.TIMESTAMP)
@@ -68,21 +55,10 @@ public class AppUser {
         this.updatedAt = LocalDateTime.now();
     }
 
-    @PostPersist
-    public void afterUserCreated() {
-        if (this.roles.contains(Role.ADMIN)) {
-            AppUserSensorGroupService service = ApplicationContextProvider.getBean(AppUserSensorGroupService.class);
-            service.assignUserToAllSensorGroupsAsync(this.id);
-        }
-    }
 
     public void updatePassword(String encodedPassword, String salt) {
         this.password = encodedPassword;
         this.salt = salt;
     }
 
-    public void updateStatus(String userId, String username){
-        this.userId = userId;
-        this.username = username;
-    }
 }

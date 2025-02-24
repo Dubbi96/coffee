@@ -64,9 +64,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         AppUser appUser = appUserRepository.findById(appUserId)
                 .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
         TokenPrincipal principal = new TokenPrincipal(appUser);
-        List<SimpleGrantedAuthority> roles = appUser.getRoles().stream()
-                .map(r -> new SimpleGrantedAuthority(r.name()))
-                .toList();
+        SimpleGrantedAuthority role = new SimpleGrantedAuthority(
+                appUser.getRole() != null ? appUser.getRole().name() : "ROLE_UNKNOWN"
+        );
+        List<SimpleGrantedAuthority> roles = List.of(role);
         return new AuthenticationToken(principal, null, "appUser", roles);
     }
 }
