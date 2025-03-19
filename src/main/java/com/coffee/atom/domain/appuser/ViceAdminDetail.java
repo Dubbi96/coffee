@@ -6,6 +6,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "vice_admin_detail")
 @Getter
@@ -21,13 +24,14 @@ public class ViceAdminDetail {
     @JoinColumn(name = "id") // app_user_id와 동일한 역할
     private AppUser appUser;
 
-    @ManyToOne
-    @JoinColumn(name = "section_id", nullable = false)
-    private Section section;
+    @OneToMany(mappedBy = "viceAdminDetail", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<ViceAdminSection> viceAdminSections = new ArrayList<>();
 
     @Column(name = "id_card_url", nullable = false)
     private String idCardUrl;
 
-    @Column(name = "name", nullable = false)
-    private String name;
+    public ViceAdminDetail updateIdCardUrl(String idCardUrl) {
+        this.idCardUrl = idCardUrl;
+        return this;
+    }
 }

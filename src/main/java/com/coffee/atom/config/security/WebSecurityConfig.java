@@ -85,11 +85,10 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(requests ->
                         requests
                                 .requestMatchers(SWAGGER_URIS).permitAll()
-                                .requestMatchers("/auth/sign-in", "/auth/sign-up").permitAll()
-                                .requestMatchers(HttpMethod.DELETE, "auth/user/**").hasAuthority("ADMIN")
-                                .requestMatchers(HttpMethod.PUT, "auth/user/password").hasAnyAuthority("ADMIN", "USER")
-                                .requestMatchers(HttpMethod.PUT, "auth/user/**").hasAuthority("ADMIN")
-                                .requestMatchers(HttpMethod.POST, "scheduler/**").permitAll()
+                                .requestMatchers("/app-user/sign-in", "/app-user/sign-up").permitAll()
+                                .requestMatchers(HttpMethod.DELETE, "app-user/**").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "app-user/password").hasAnyAuthority("ADMIN", "USER")
+                                .requestMatchers(HttpMethod.PUT, "app-user/**").hasAuthority("ADMIN")
                                 .requestMatchers(HttpMethod.POST, "/project/page/*/section", "/project/element", "/file/applicant/step/**", "/announcement/**", "/faq/**", "/qna/**").hasAuthority("ADMIN")
                                 .requestMatchers("/project/**", "/corporation/**", "/qna/**", "/faq/**", "/file/**").hasAnyAuthority("VIEWER", "ADMIN")
                         .anyRequest().authenticated()

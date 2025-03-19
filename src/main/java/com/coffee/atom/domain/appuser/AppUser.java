@@ -55,10 +55,13 @@ public class AppUser {
         this.updatedAt = LocalDateTime.now();
     }
 
-
     public void updatePassword(String encodedPassword, String salt) {
         this.password = encodedPassword;
         this.salt = salt;
+    }
+
+    public void updateUserName(String userName) {
+        this.username = userName;
     }
 
 }

@@ -3,18 +3,14 @@ package com.coffee.atom.service;
 import com.coffee.atom.config.error.CustomException;
 import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.config.security.JwtProvider;
-import com.coffee.atom.domain.appuser.AppUser;
-import com.coffee.atom.domain.appuser.AppUserRepository;
-import com.coffee.atom.domain.appuser.Role;
-import com.coffee.atom.dto.appuser.AppUserResponseDto;
-import com.coffee.atom.dto.appuser.SignInRequestDto;
-import com.coffee.atom.dto.appuser.SignInResponseDto;
-import com.coffee.atom.dto.appuser.SignUpRequestDto;
+import com.coffee.atom.domain.appuser.*;
+import com.coffee.atom.dto.appuser.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -26,6 +22,9 @@ public class AppUserService {
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final ViceAdminDetailRepository viceAdminDetailRepository;
+    private final VillageHeadDetailRepository villageHeadDetailRepository;
+    private final ViceAdminSectionRepository viceAdminSectionRepository;
 
     @Transactional(readOnly = true)
     public SignInResponseDto login(SignInRequestDto accountRequestDto) {
@@ -44,18 +43,47 @@ public class AppUserService {
         String salt = UUID.randomUUID().toString();
         String encodedPassword = passwordEncoder.encode(authRequestDto.getPassword() + salt);
 
-        Role userRole = Role.valueOf(authRequestDto.getRole().toUpperCase()); // String을 Role enum으로 변환
-
         AppUser newUser = AppUser.builder()
                 .userId(authRequestDto.getUserId())
                 .username(authRequestDto.getUsername())
                 .password(encodedPassword)
                 .salt(salt)
-                .role(userRole)
+                .role(authRequestDto.getRole())
                 .build();
 
         appUserRepository.save(newUser);
         return newUser.getId();
+    }
+
+    @Transactional
+    public void updateAppUserStatus(AppUser appUser, AppUserStatusUpdateRequestDto appUserStatusUpdateRequestDto) {
+        appUser.updateUserName(appUserStatusUpdateRequestDto.getUsername());
+        String salt = UUID.randomUUID().toString();
+        String encodedPassword = passwordEncoder.encode(appUserStatusUpdateRequestDto.getPassword() + salt);
+        appUser.updatePassword(encodedPassword, salt);
+        if ((appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ||
+                appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER) &&
+                appUserStatusUpdateRequestDto.getIdCardUrl() != null) {
+            viceAdminDetailRepository.save(viceAdminDetailRepository.findById(appUser.getId())
+                    .orElseGet(ViceAdminDetail::new)
+                    .updateIdCardUrl(appUserStatusUpdateRequestDto.getIdCardUrl()));
+        }
+        appUserRepository.save(appUser);
+    }
+
+    @Transactional(readOnly = true)
+    public List<VillageHeadResponseDto> getVillageHeads(AppUser appUser) {
+        if(appUser.getRole().equals(Role.ADMIN)){
+            return villageHeadDetailRepository.findAllWithFarmerCountForAdmin();
+        }
+        else if(appUser.getRole().equals(Role.VICE_ADMIN_HEAD_OFFICER)||appUser.getRole().equals(Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER)){
+            List<Long> sectionIds = viceAdminSectionRepository.findSectionIdsByViceAdminId(appUser.getId());
+            if (sectionIds.isEmpty()) {
+                return Collections.emptyList();
+            }
+            return villageHeadDetailRepository.findAllWithFarmerCountForViceAdmin(sectionIds);
+        }
+        else throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
     }
 
     @Transactional(readOnly = true)

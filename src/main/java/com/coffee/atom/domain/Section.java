@@ -1,10 +1,14 @@
 package com.coffee.atom.domain;
 
+import com.coffee.atom.domain.appuser.ViceAdminDetail;
+import com.coffee.atom.domain.appuser.ViceAdminSection;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "section")
@@ -25,4 +29,7 @@ public class Section {
 
     @Column(name = "latitude", nullable = false)
     private Double latitude;
+
+    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<ViceAdminSection> viceAdminSections = new ArrayList<>();
 }

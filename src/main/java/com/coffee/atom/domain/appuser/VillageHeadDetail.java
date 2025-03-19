@@ -27,9 +27,6 @@ public class VillageHeadDetail {
     @JoinColumn(name = "section_id", nullable = false)
     private Section section;
 
-    @Column(name = "name", nullable = false)
-    private String name;
-
     @Column(name = "identification_photo_url")
     private String identificationPhotoUrl;
 
