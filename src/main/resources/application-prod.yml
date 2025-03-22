@@ -1,0 +1,3 @@
+gcs:
+  credentials:
+    path: /app/coffee-backend-key.json

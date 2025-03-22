@@ -1,6 +1,7 @@
 spring:
   profiles:
     include:  jpa, datasource
+    active: local
   main:
     allow-bean-definition-overriding: true
   mvc:
@@ -43,8 +44,6 @@ gcs:
     id: dubbi-coffee
   bucket:
     name: dubbi-coffee
-  credentials:
-    path: /key/coffee-backend-key.json
 
 logging:
   discord:
