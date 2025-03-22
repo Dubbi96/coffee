@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
@@ -36,7 +37,12 @@ public class GCSUtil {
                    FileEventLogService fileEventLogService) throws IOException {
         this.fileEventLogService = fileEventLogService;
         ClassPathResource classPathResource = new ClassPathResource(credentialsPath);
-        InputStream keyFile = new BufferedInputStream(classPathResource.getInputStream());
+        InputStream keyFile;
+        if (credentialsPath.startsWith("/") || credentialsPath.startsWith("file:")) {
+            keyFile = new FileInputStream(credentialsPath); // 절대 경로
+        } else {
+            keyFile = new ClassPathResource(credentialsPath).getInputStream(); // classpath
+        }
 
         storage = StorageOptions.newBuilder()
                 .setProjectId(projectId)
