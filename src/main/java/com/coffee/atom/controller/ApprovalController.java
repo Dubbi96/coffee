@@ -5,9 +5,7 @@ import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.dto.approval.ApprovalFarmerRequestDto;
 import com.coffee.atom.dto.approval.ApprovalTreesTransactionRequestDto;
 import com.coffee.atom.dto.approval.ApprovalVillageHeadRequestDto;
-import com.coffee.atom.service.AppUserService;
 import com.coffee.atom.service.approval.ApprovalFacadeService;
-import com.coffee.atom.service.approval.ApprovalService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,7 +22,7 @@ public class ApprovalController {
 
     @PostMapping(value = "/village-head", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-        summary = "면장 생성 승인 요청",
+        summary = "면장 생성 승인 요청 2️⃣ 부 관리자",
         description = "<b>면장 계정 생성을 위한 승인 요청</b><br>" +
                       "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
                       "파일은 Multipart 형식으로 전송되며, 일부 항목은 생략 가능"
@@ -63,7 +61,7 @@ public class ApprovalController {
 
     @PostMapping(value = "/farmer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-        summary = "농부 생성 승인 요청",
+        summary = "농부 생성 승인 요청 2️⃣ 부 관리자 ",
         description = "<b>농부 계정 생성을 위한 승인 요청 생성</b><br>" +
                       "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
                       "파일은 Multipart 형식으로 전송되며, 신분증 이미지는 선택 사항"
@@ -90,7 +88,7 @@ public class ApprovalController {
 
     @PostMapping(value = "/trees-transaction")
     @Operation(
-        summary = "나무 수령 승인 요청",
+        summary = "나무 수령 승인 요청 2️⃣ 부 관리자 ",
         description = "<b>나무 수령 정보를 위한 승인 요청 생성</b><br>" +
                       "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>"
     )

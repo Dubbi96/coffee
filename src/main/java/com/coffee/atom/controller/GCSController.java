@@ -34,7 +34,13 @@ public class GCSController {
     private final FileEventLogService fileEventLogService;
 
     @PostMapping(value = "/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "단일 파일 업로드 API", description = "단일 파일 업로드")
+    @Operation(
+            summary = "단일 파일 업로드",
+            description = "<b>GCS 버킷에 단일 파일을 업로드</b><br>" +
+                    "업로드한 파일은 UUID 기반 고유파일 명으로 저장하며,<br>" +
+                    "업로드 성공 여부에 따라 <code>FileEventLog</code>에 로그 기록<br>" +
+                    "업로드 경로는 선택적으로 지정 가능하며, 지정하지 않으면 루트 디렉토리에 저장"
+    )
     public String uploadFileToGCS(@LoginAppUser AppUser appUser,
                                   @RequestParam(value = "directory", required = false) String directory,
                                   @RequestPart(value = "file") MultipartFile file) {
@@ -48,7 +54,13 @@ public class GCSController {
     }
 
     @PostMapping(value = "/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "복수 파일 업로드 API", description = "복수 파일 업로드")
+    @Operation(
+    summary = "복수 파일 업로드",
+    description = "<b>GCS 버킷에 복수의 파일 업로드.</b><br>" +
+            "각 파일은 UUID 기반 고유 파일명으로 저장,<br>" +
+            "업로드 성공 여부에 따라 <code>FileEventLog</code>에 로그 기록<br>" +
+            "업로드 경로는 선택적으로 지정 가능하며, 지정하지 않으면 루트 디렉토리에 저장"
+    )
     public List<String> uploadFilesToGCS(@LoginAppUser AppUser appUser,
                                          @RequestParam(value = "directory", required = false) String directory,
                                          @RequestPart(value = "files") List<MultipartFile> files) {
@@ -62,7 +74,12 @@ public class GCSController {
     }
 
     @DeleteMapping(value = "/files")
-    @Operation(summary = "복수 파일 삭제 API", description = "복수 파일 삭제")
+    @Operation(
+            summary = "복수 파일 삭제",
+            description = "<b>GCS 버킷에서 복수 파일을 삭제</b><br>" +
+                    "파일 URL 리스트를 전달하면 해당 파일들을 GCS에서 삭제하며,<br>" +
+                    "삭제된 파일들은 <code>FileEventLog</code>에 <b>DELETE</b> 타입으로 로그로 기록"
+    )
     public void deleteFilesFromGCS(@LoginAppUser AppUser appUser,
                                    @RequestBody FileDeleteRequestDto fileDeleteRequestDto) {
         if (isNull(fileDeleteRequestDto.getFileUrls()) || fileDeleteRequestDto.getFileUrls().isEmpty()) return;
@@ -71,6 +88,13 @@ public class GCSController {
 
     @GetMapping("/download")
     @IgnoreResponseBinding
+    @Operation(
+            summary = "파일 다운로드",
+            description = "<b>GCS 버킷에서 파일을 다운로드</b><br>" +
+                    "요청된 파일 URL을 통해 GCS에서 파일을 스트림으로 읽어와 응답하며,<br>" +
+                    "InputStreamResource로 응답하기 위해 ***ResponseEntity***를 예외적으로 사용<br>" +
+                    "파일 다운로드 결과는 <code>FileEventLog</code>에 <b>DOWNLOAD</b> 타입으로 로그 기록<br>"
+    )
     public ResponseEntity<InputStreamResource> downloadFile(@LoginAppUser AppUser appUser,
                                                             @RequestParam String fileUrl) {
         InputStream inputStream = gcsUtil.downloadFileFromGCS(fileUrl, appUser);
@@ -86,6 +110,14 @@ public class GCSController {
 
     @GetMapping("/image")
     @IgnoreResponseBinding
+    @Operation(
+        summary = "이미지 미리보기",
+        description = "<b>GCS 버킷에 저장된 이미지 파일을 스트림으로 반환</b><br>" +
+                "파일 URL을 통해 이미지 스트림을 반환하며,<br>" +
+                "InputStreamResource로 응답하기 위해 ***ResponseEntity***를 예외적으로 사용<br>" +
+                "파일 확장자에 따라 <code>MediaType</code>을 설정해 응답<br>" +
+                "이미지에 한정된 API이므로 ***PNG, JPEG, GIF*** 형식만 지원 가능"
+    )
     public ResponseEntity<InputStreamResource> getImage(@LoginAppUser AppUser appUser,
                                                         @RequestParam String fileUrl) {
         InputStream imageStream = gcsUtil.downloadFileFromGCS(fileUrl, appUser);
