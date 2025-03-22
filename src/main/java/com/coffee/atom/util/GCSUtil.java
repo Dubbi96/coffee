@@ -36,12 +36,13 @@ public class GCSUtil {
                    @Value("${gcs.project.id}") String projectId,
                    FileEventLogService fileEventLogService) throws IOException {
         this.fileEventLogService = fileEventLogService;
-        ClassPathResource classPathResource = new ClassPathResource(credentialsPath);
         InputStream keyFile;
-        if (credentialsPath.startsWith("/") || credentialsPath.startsWith("file:")) {
-            keyFile = new FileInputStream(credentialsPath); // 절대 경로
+        if (credentialsPath.startsWith("classpath:")) {
+            keyFile = new ClassPathResource(credentialsPath.replace("classpath:", "")).getInputStream();
+        } else if (credentialsPath.startsWith("/") || credentialsPath.startsWith("file:")) {
+            keyFile = new FileInputStream(credentialsPath);
         } else {
-            keyFile = new ClassPathResource(credentialsPath).getInputStream(); // classpath
+            keyFile = new ClassPathResource(credentialsPath).getInputStream();
         }
 
         storage = StorageOptions.newBuilder()
