@@ -1,6 +1,7 @@
 package com.coffee.atom.config;
 
 import com.coffee.atom.common.ApiResponse;
+import com.coffee.atom.common.IgnoreResponseBinding;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -16,7 +17,7 @@ public class ResponseWrapper implements ResponseBodyAdvice<Object> {
 
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
-        return true;
+        return true; // 항상 처리
     }
 
     @Override
@@ -28,6 +29,17 @@ public class ResponseWrapper implements ResponseBodyAdvice<Object> {
             ServerHttpRequest request,
             ServerHttpResponse response
     ) {
+        // IgnoreResponseBinding이 붙은 경우 포장하지 않음
+        if (returnType.getDeclaringClass().isAnnotationPresent(IgnoreResponseBinding.class)
+            || returnType.hasMethodAnnotation(IgnoreResponseBinding.class)) {
+            return body;
+        }
+
+        // 이미 ApiResponse로 감싼 경우 중복 방지
+        if (body instanceof ApiResponse) {
+            return body;
+        }
+
         return ApiResponse.builder()
                 .message("성공")
                 .code(CodeValue.SUCCESS.getValue())

@@ -2,15 +2,12 @@ package com.coffee.atom.domain.appuser;
 
 import com.coffee.atom.domain.Section;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
 @Table(name = "village_head_detail")
 @Getter
-@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class VillageHeadDetail {
@@ -30,6 +27,9 @@ public class VillageHeadDetail {
     @Column(name = "identification_photo_url")
     private String identificationPhotoUrl;
 
+    @Column(name = "bank_name")
+    private String bankName;
+
     @Column(name = "account_info")
     private String accountInfo;
 
@@ -38,4 +38,7 @@ public class VillageHeadDetail {
 
     @Column(name = "bankbook_url")
     private String bankbookUrl;
+
+    @Column(name = "is_approved")
+    private Boolean isApproved;
 }

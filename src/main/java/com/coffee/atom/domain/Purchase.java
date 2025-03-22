@@ -42,4 +42,7 @@ public class Purchase {
 
     @Column(name = "payment_amount", nullable = false)
     private Long paymentAmount;
+
+    @Column(name = "is_approved")
+    private Boolean isApproved;
 }

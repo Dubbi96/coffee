@@ -2,15 +2,12 @@ package com.coffee.atom.domain;
 
 import com.coffee.atom.domain.appuser.VillageHeadDetail;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
 @Table(name = "farmer")
 @Getter
-@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Farmer {
@@ -28,4 +25,7 @@ public class Farmer {
 
     @Column(name = "identification_photo_url")
     private String identificationPhotoUrl;
+
+    @Column(name = "is_approved")
+    private Boolean isApproved;
 }

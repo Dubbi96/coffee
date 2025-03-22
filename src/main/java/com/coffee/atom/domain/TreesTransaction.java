@@ -1,17 +1,14 @@
 package com.coffee.atom.domain;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "trees_transaction")
 @Getter
-@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class TreesTransaction {
@@ -32,4 +29,7 @@ public class TreesTransaction {
 
     @Column(name = "quantity", nullable = false)
     private Long quantity;
+
+    @Column(name = "is_approved")
+    private Boolean isApproved;
 }

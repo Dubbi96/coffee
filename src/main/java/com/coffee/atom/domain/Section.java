@@ -32,4 +32,7 @@ public class Section {
 
     @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ViceAdminSection> viceAdminSections = new ArrayList<>();
+
+    @Column(name = "is_approved")
+    private Boolean isApproved;
 }

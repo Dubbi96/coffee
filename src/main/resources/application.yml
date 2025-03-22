@@ -38,6 +38,14 @@ springdoc:
   cache:
     disabled: true
 
+gcs:
+  project:
+    id: dubbi-coffee
+  bucket:
+    name: dubbi-coffee
+  credentials:
+    path: /key/coffee-backend-key.json
+
 logging:
   discord:
     webhook-url: https://discord.com/api/webhooks/1343491369313894411/Xbt3Eg7oyBZkgZIiahQrs3bufi0obajdigrFfTxMeaQDWckq-M0ihQdKFgVcc0qaLzHf

@@ -3,15 +3,24 @@ package com.coffee.atom.service;
 import com.coffee.atom.config.error.CustomException;
 import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.config.security.JwtProvider;
+import com.coffee.atom.domain.Farmer;
+import com.coffee.atom.domain.FarmerRepository;
+import com.coffee.atom.domain.SectionRepository;
 import com.coffee.atom.domain.appuser.*;
+import com.coffee.atom.dto.approval.ApprovalFarmerRequestDto;
+import com.coffee.atom.dto.approval.ApprovalVillageHeadRequestDto;
 import com.coffee.atom.dto.appuser.*;
+import com.coffee.atom.util.GCSUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,6 +34,9 @@ public class AppUserService {
     private final ViceAdminDetailRepository viceAdminDetailRepository;
     private final VillageHeadDetailRepository villageHeadDetailRepository;
     private final ViceAdminSectionRepository viceAdminSectionRepository;
+    private final SectionRepository sectionRepository;
+    private final GCSUtil gcsUtil;
+    private final FarmerRepository farmerRepository;
 
     @Transactional(readOnly = true)
     public SignInResponseDto login(SignInRequestDto accountRequestDto) {
@@ -49,6 +61,7 @@ public class AppUserService {
                 .password(encodedPassword)
                 .salt(salt)
                 .role(authRequestDto.getRole())
+                .isApproved(Boolean.TRUE)
                 .build();
 
         appUserRepository.save(newUser);
@@ -56,19 +69,49 @@ public class AppUserService {
     }
 
     @Transactional
-    public void updateAppUserStatus(AppUser appUser, AppUserStatusUpdateRequestDto appUserStatusUpdateRequestDto) {
-        appUser.updateUserName(appUserStatusUpdateRequestDto.getUsername());
+    public void updateAppUserStatus(AppUser appUser, String username, String password, MultipartFile idCardPhoto) {
+        appUser.updateUserName(username);
+
         String salt = UUID.randomUUID().toString();
-        String encodedPassword = passwordEncoder.encode(appUserStatusUpdateRequestDto.getPassword() + salt);
+        String encodedPassword = passwordEncoder.encode(password + salt);
         appUser.updatePassword(encodedPassword, salt);
+
         if ((appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ||
-                appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER) &&
-                appUserStatusUpdateRequestDto.getIdCardUrl() != null) {
-            viceAdminDetailRepository.save(viceAdminDetailRepository.findById(appUser.getId())
-                    .orElseGet(ViceAdminDetail::new)
-                    .updateIdCardUrl(appUserStatusUpdateRequestDto.getIdCardUrl()));
+             appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER) &&
+            idCardPhoto != null) {
+
+            ViceAdminDetail detail = viceAdminDetailRepository.findById(appUser.getId())
+                    .map(existing -> {
+                        String existingUrl = existing.getIdCardUrl();
+                        String newFileUrl = uploadIdCardToGCS(appUser, idCardPhoto, existingUrl);
+                        return existing.updateIdCardUrl(newFileUrl);
+                    })
+                    .orElseGet(() -> {
+                        String newFileUrl = uploadIdCardToGCS(appUser, idCardPhoto, null);
+                        return ViceAdminDetail.builder()
+                                .appUser(appUser)
+                                .idCardUrl(newFileUrl)
+                                .build();
+                    });
+
+            viceAdminDetailRepository.save(detail);
         }
+
         appUserRepository.save(appUser);
+    }
+
+    /**
+     * GCS에 ID 카드 업로드 후 URL 반환
+     */
+    private String uploadIdCardToGCS(AppUser appUser, MultipartFile file, String previousFileUrl) {
+        try {
+            if (StringUtils.hasText(previousFileUrl)) {
+                gcsUtil.deleteFileFromGCS(previousFileUrl, appUser);
+            }
+            return gcsUtil.uploadFileToGCS("id_cards", file, appUser);
+        } catch (IOException e) {
+            throw new CustomException("ID 카드 업로드 실패");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -87,28 +130,81 @@ public class AppUserService {
     }
 
     @Transactional(readOnly = true)
-    public AppUserResponseDto getUserDetails(Long userId) {
-        AppUser user = appUserRepository.findById(userId)
+    public VillageHeadDetailResponseDto getVillageHead(Long villageHeadId) {
+        VillageHeadDetail villageHeadDetail = villageHeadDetailRepository.findVillageHeadDetailByIsApprovedAndId(Boolean.TRUE, villageHeadId)
                 .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
-        return new AppUserResponseDto(user);
-    }
+        AppUser appUser = appUserRepository.findAppUserByIsApprovedAndId(Boolean.TRUE, villageHeadId)
+                .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
 
-    @Transactional(readOnly = true)
-    public List<AppUserResponseDto> getUserList() {
-        return appUserRepository.findAll()
-                .stream()
-                .sorted(Comparator.comparing((AppUser user) -> user.getRole().ordinal()) // Role Enum에 표기된 순서대로 나열
-                        .thenComparing(AppUser::getId)) // 같은 역할 내에서 appUserId 오름차순 정렬
-                .map(AppUserResponseDto::new)
-                .toList();
+        return VillageHeadDetailResponseDto.builder()
+                .userId(appUser.getUserId())
+                .username(appUser.getUsername())
+                .accountInfo(villageHeadDetail.getAccountInfo())
+                .identificationPhotoUrl(villageHeadDetail.getIdentificationPhotoUrl())
+                .contractFileUrl(villageHeadDetail.getContractUrl())
+                .bankbookPhotoUrl(villageHeadDetail.getBankbookUrl())
+                .sectionInfo(VillageHeadDetailResponseDto.SectionInfo.from((villageHeadDetail.getSection())))
+                .build();
     }
 
     @Transactional
-    public void updateAppUserPassword(AppUser appUser, String newPassword) {
+    public Long requestApprovalToCreateVillageHead(AppUser appUser, ApprovalVillageHeadRequestDto approvalVillageHeadRequestDto) {
+        appUserRepository.findByUsername(approvalVillageHeadRequestDto.getUserId()).ifPresent(villageHead -> {
+            throw new IllegalArgumentException(ErrorValue.NICKNAME_ALREADY_EXISTS.toString());
+        });
         String salt = UUID.randomUUID().toString();
-        String encodedPassword = passwordEncoder.encode(newPassword + salt);
-        appUser.updatePassword(encodedPassword, salt);
-        appUserRepository.save(appUser);
+        String encodedPassword = passwordEncoder.encode(approvalVillageHeadRequestDto.getPassword() + salt);
+
+        AppUser newUser = AppUser.builder()
+                .userId(approvalVillageHeadRequestDto.getUserId())
+                .username(approvalVillageHeadRequestDto.getUsername())
+                .password(encodedPassword)
+                .salt(salt)
+                .role(Role.VILLAGE_HEAD)
+                .build();
+
+        String directory = "village-head/";
+        String identificationUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getIdentificationPhoto(), directory, appUser);
+        String contractUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getContractFile(), directory, appUser);
+        String bankbookUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getBankbookPhoto(), directory, appUser);
+
+        VillageHeadDetail newVillageHead = VillageHeadDetail.builder()
+            .appUser(newUser)
+            .accountInfo(approvalVillageHeadRequestDto.getAccountInfo())
+            .bankbookUrl(bankbookUrl)
+            .contractUrl(contractUrl)
+            .identificationPhotoUrl(identificationUrl)
+            .section(sectionRepository.findById(approvalVillageHeadRequestDto.getSectionId())
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Section 입니다.")))
+            .build();
+        appUserRepository.save(newUser);
+        villageHeadDetailRepository.save(newVillageHead);
+        return newUser.getId();
     }
 
+    @Transactional
+    public Long requestApprovalToCreateFarmer(AppUser appUser, ApprovalFarmerRequestDto approvalFarmerRequestDto) {
+        VillageHeadDetail villageHeadDetail = villageHeadDetailRepository.findById(approvalFarmerRequestDto.getVillageHeadId())
+                .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
+        String directory = "farmer/";
+        String identificationUrl = uploadFileIfPresent(approvalFarmerRequestDto.getIdentificationPhoto(), directory, appUser);
+        Farmer farmer = Farmer.builder()
+                .name(approvalFarmerRequestDto.getName())
+                .villageHead(villageHeadDetail)
+                .identificationPhotoUrl(identificationUrl)
+                .build();
+        farmerRepository.save(farmer);
+        return farmer.getId();
+    }
+
+    private String uploadFileIfPresent(MultipartFile file, String directory, AppUser uploader) {
+        if (file != null && !file.isEmpty()) {
+            try {
+                return gcsUtil.uploadFileToGCS(directory, file, uploader);
+            } catch (IOException e) {
+                throw new CustomException("파일 업로드 실패: " + file.getOriginalFilename());
+            }
+        }
+        return null;
+    }
 }

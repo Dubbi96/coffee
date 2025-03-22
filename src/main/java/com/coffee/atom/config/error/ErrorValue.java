@@ -11,6 +11,7 @@ public enum ErrorValue {
     TOKEN_NOT_FOUND("토큰이 존재하지 않습니다."),
     TOKEN_EXPIRED("토큰이 만료되었습니다."),
     ACCOUNT_NOT_FOUND("존재하지 않는 계정입니다."),
+    FARMER_NOT_FOUND("해당 농부는 존재하지 않습니다."),
     SUBJECT_NOT_FOUND("존재하지 않는 종목입니다."),
     EMAIL_ALREADY_EXISTS("이미 존재하는 이메일입니다."),
     SENSOR_NOT_FOUND("존재하지 않는 센서 입니다."),

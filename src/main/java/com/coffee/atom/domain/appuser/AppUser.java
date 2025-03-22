@@ -45,6 +45,9 @@ public class AppUser {
     @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime updatedAt;
 
+    @Column(name = "is_approved")
+    private Boolean isApproved;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
