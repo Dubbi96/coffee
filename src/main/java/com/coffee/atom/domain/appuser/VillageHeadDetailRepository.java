@@ -32,7 +32,22 @@ public interface VillageHeadDetailRepository extends JpaRepository<VillageHeadDe
        "AND a.isApproved = true " +
        "AND s.isApproved = true " +
        "GROUP BY v.id, a.userId, a.username, s.sectionName")
-    List<VillageHeadResponseDto> findAllWithFarmerCountForViceAdmin(@Param("sectionIds") List<Long> sectionIds);
+   List<VillageHeadResponseDto> findAllWithFarmerCountForViceAdmin(@Param("sectionIds") List<Long> sectionIds);
 
-    Optional<VillageHeadDetail> findVillageHeadDetailByIsApprovedAndId(Boolean isApproved, Long id);
+
+   @Query("SELECT new com.coffee.atom.dto.appuser.VillageHeadResponseDto( " +
+           " v.id, a.userId, a.username, s.sectionName, COUNT(DISTINCT f.id) ) " +
+           "FROM VillageHeadDetail v " +
+           "LEFT JOIN v.appUser a " +
+           "LEFT JOIN v.section s " +
+           "LEFT JOIN s.area area " +
+           "LEFT JOIN Farmer f ON f.villageHead.id = v.id AND f.isApproved = true " +
+           "WHERE area.id = :areaId " +
+           "AND v.isApproved = true " +
+           "AND a.isApproved = true " +
+           "AND s.isApproved = true " +
+           "GROUP BY v.id, a.userId, a.username, s.sectionName")
+   List<VillageHeadResponseDto> findAllWithFarmerCountByAreaId(@Param("areaId") Long areaId);
+
+   Optional<VillageHeadDetail> findVillageHeadDetailByIsApprovedAndId(Boolean isApproved, Long id);
 }

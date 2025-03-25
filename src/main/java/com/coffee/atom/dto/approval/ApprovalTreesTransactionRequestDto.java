@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 public class ApprovalTreesTransactionRequestDto {
+    private Long id;
     @Parameter(description = "나무 수량")
     private Long quantity;
     @Parameter(description = "수령 일자")

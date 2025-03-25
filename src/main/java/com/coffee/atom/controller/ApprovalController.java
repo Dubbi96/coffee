@@ -1,24 +1,48 @@
 package com.coffee.atom.controller;
 
 import com.coffee.atom.config.security.LoginAppUser;
+import com.coffee.atom.domain.approval.ServiceType;
+import com.coffee.atom.domain.approval.Status;
 import com.coffee.atom.domain.appuser.AppUser;
-import com.coffee.atom.dto.approval.ApprovalFarmerRequestDto;
-import com.coffee.atom.dto.approval.ApprovalTreesTransactionRequestDto;
-import com.coffee.atom.dto.approval.ApprovalVillageHeadRequestDto;
+import com.coffee.atom.dto.approval.*;
 import com.coffee.atom.service.approval.ApprovalFacadeService;
+import com.coffee.atom.service.approval.ApprovalService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/approval")
 @RequiredArgsConstructor
 public class ApprovalController {
     private final ApprovalFacadeService approvalFacadeService;
+    private final ApprovalService approvalService;
+
+    @GetMapping("/approvals")
+    @Operation(
+        summary = "요청 목록 조회",
+        description = "<b>승인 요청 목록을 상태 및 서비스 타입으로 필터링</b><br>" +
+                      "다중 선택 필터 및 페이지네이션 지원<br>" +
+                      "예: ?statuses=PENDING&statuses=APPROVED&serviceTypes=PURCHASE&page=0&size=10"
+    )
+    public Page<ApprovalResponseDto> getApprovals(
+            @RequestParam(value = "statuses", required = false) List<Status> statuses,
+            @RequestParam(value = "serviceTypes", required = false) List<ServiceType> serviceTypes,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @LoginAppUser AppUser appUser
+    ) {
+        return approvalService.findApprovals(statuses, serviceTypes, pageable, appUser);
+    }
 
     @PostMapping(value = "/village-head", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
@@ -113,5 +137,62 @@ public class ApprovalController {
         }
     }
 
+    @PostMapping(value = "/purchase")
+    @Operation(
+        summary = "수매 승인 요청 2️⃣ 부 관리자 (한국지사) ",
+        description = "<b>수매 정보를 위한 승인 요청 생성</b><br>" +
+                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>"
+    )
+    public void requestApprovalToCreatePurchase(
+            @Parameter(description = "승인자 ADMIN ID")
+            @RequestParam("approverId") Long approverId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "수매 내역 등록 정보<br>" +
+                            "- <b>id</b>: ⚠️수정에 사용할 필드로 해당 서비스에서는 사용하지 않음<br>" +
+                            "- <b>deduction</b>: 차감액<br>" +
+                            "- <b>paymentAmount</b>: 지급액<br>" +
+                            "- <b>purchaseDate</b>: 거래 일자<br>" +
+                            "- <b>quantity</b>: 수량<br>" +
+                            "- <b>totalPrice</b>: 총액<br>" +
+                            "- <b>unitPrice</b>: 단가<br>",
+                    required = true
+            )
+            @RequestBody ApprovalPurchaseRequestDto approvalPurchaseRequestDto,
+            @LoginAppUser AppUser appUser
+    ){
+        try {
+            approvalFacadeService.processPurchaseCreation(appUser, approverId, approvalPurchaseRequestDto);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+        }
+    }
+
+    @PostMapping(value = "/section")
+    @Operation(
+        summary = "섹션 생성 승인 요청 2️⃣ 부 관리자 ",
+        description = "<b>섹션 생성 승인 요청 생성</b><br>" +
+                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>"
+    )
+    public void requestApprovalToCreateSection(
+            @Parameter(description = "승인자 ADMIN ID")
+            @RequestParam("approverId") Long approverId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "수매 내역 등록 정보<br>" +
+                            "- <b>id</b>: ⚠️타 서비스에 사용할 필드로 해당 서비스에서는 사용하지 않음<br>" +
+                            "- <b>longitude</b>: 섹션의 경도<br>" +
+                            "- <b>latitude</b>: 섹션의 위도<br>" +
+                            "- <b>sectionName</b>: 섹션 명<br>" +
+                            "- <b>areaId</b>: 지역 ID<br>",
+                    required = true
+            )
+            @RequestBody ApprovalSectionRequestDto approvalSectionRequestDto,
+            @LoginAppUser AppUser appUser
+    ){
+        try {
+            approvalFacadeService.processSectionCreation(appUser, approverId, approvalSectionRequestDto);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+        }
+    }
 
 }

@@ -1,14 +1,11 @@
 package com.coffee.atom.domain.appuser;
 
-import com.coffee.atom.domain.Section;
+import com.coffee.atom.domain.area.Area;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "vice_admin_detail")
@@ -26,8 +23,8 @@ public class ViceAdminDetail {
     @JoinColumn(name = "id") // app_user_id와 동일한 역할
     private AppUser appUser;
 
-    @OneToMany(mappedBy = "viceAdminDetail", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<ViceAdminSection> viceAdminSections = new ArrayList<>();
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Area area;
 
     @Column(name = "id_card_url", nullable = false)
     private String idCardUrl;

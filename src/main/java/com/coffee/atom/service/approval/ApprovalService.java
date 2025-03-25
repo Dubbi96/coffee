@@ -5,9 +5,13 @@ import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.domain.approval.*;
 import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.domain.appuser.AppUserRepository;
+import com.coffee.atom.dto.approval.ApprovalResponseDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,4 +61,22 @@ public class ApprovalService {
         // 4. 저장
         approvalRepository.save(approval);
     }
+
+    @Transactional(readOnly = true)
+    public Page<ApprovalResponseDto> findApprovals(List<Status> statuses, List<ServiceType> serviceTypes, Pageable pageable, AppUser appUser) {
+        Specification<Approval> spec = Specification.where(null);
+
+        if (statuses != null && !statuses.isEmpty()) {
+            spec = spec.and((root, query, cb) -> root.get("status").in(statuses));
+        }
+
+        if (serviceTypes != null && !serviceTypes.isEmpty()) {
+            spec = spec.and((root, query, cb) -> root.get("serviceType").in(serviceTypes));
+        }
+
+        return approvalRepository.findAll(spec, pageable)
+                .map(ApprovalResponseDto::from);
+    }
+
+
 }

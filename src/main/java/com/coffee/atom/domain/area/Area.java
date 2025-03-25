@@ -1,7 +1,6 @@
-package com.coffee.atom.domain;
+package com.coffee.atom.domain.area;
 
 import com.coffee.atom.domain.appuser.ViceAdminDetail;
-import com.coffee.atom.domain.appuser.ViceAdminSection;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,18 +10,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "section")
+@Table(name = "area")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Section {
-
+public class Area {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "section_name", nullable = false)
-    private String sectionName;
+    @Column(name = "area_name", nullable = false)
+    private String areaName;
 
     @Column(name = "longitude", nullable = false)
     private Double longitude;
@@ -30,9 +28,9 @@ public class Section {
     @Column(name = "latitude", nullable = false)
     private Double latitude;
 
-    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<ViceAdminSection> viceAdminSections = new ArrayList<>();
+    @OneToMany(mappedBy = "area", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<Section> sections = new ArrayList<>();
 
-    @Column(name = "is_approved")
-    private Boolean isApproved;
+    @OneToMany(mappedBy = "area", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<ViceAdminDetail> viceAdminDetails = new ArrayList<>();
 }

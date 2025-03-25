@@ -5,7 +5,7 @@ import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.config.security.JwtProvider;
 import com.coffee.atom.domain.Farmer;
 import com.coffee.atom.domain.FarmerRepository;
-import com.coffee.atom.domain.SectionRepository;
+import com.coffee.atom.domain.area.SectionRepository;
 import com.coffee.atom.domain.appuser.*;
 import com.coffee.atom.dto.approval.ApprovalFarmerRequestDto;
 import com.coffee.atom.dto.approval.ApprovalVillageHeadRequestDto;
@@ -19,7 +19,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -33,7 +32,6 @@ public class AppUserService {
     private final JwtProvider jwtProvider;
     private final ViceAdminDetailRepository viceAdminDetailRepository;
     private final VillageHeadDetailRepository villageHeadDetailRepository;
-    private final ViceAdminSectionRepository viceAdminSectionRepository;
     private final SectionRepository sectionRepository;
     private final GCSUtil gcsUtil;
     private final FarmerRepository farmerRepository;
@@ -116,17 +114,23 @@ public class AppUserService {
 
     @Transactional(readOnly = true)
     public List<VillageHeadResponseDto> getVillageHeads(AppUser appUser) {
-        if(appUser.getRole().equals(Role.ADMIN)){
+        Role role = appUser.getRole();
+
+        if (role.equals(Role.ADMIN)) {
             return villageHeadDetailRepository.findAllWithFarmerCountForAdmin();
         }
-        else if(appUser.getRole().equals(Role.VICE_ADMIN_HEAD_OFFICER)||appUser.getRole().equals(Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER)){
-            List<Long> sectionIds = viceAdminSectionRepository.findSectionIdsByViceAdminId(appUser.getId());
-            if (sectionIds.isEmpty()) {
-                return Collections.emptyList();
-            }
-            return villageHeadDetailRepository.findAllWithFarmerCountForViceAdmin(sectionIds);
+        else if (role.equals(Role.VICE_ADMIN_HEAD_OFFICER) || role.equals(Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER)) {
+            // ➤ ViceAdminDetail을 기반으로 areaId 추출
+            ViceAdminDetail viceAdminDetail = viceAdminDetailRepository.findByAppUserId(appUser.getId())
+                    .orElseThrow(() -> new CustomException("부 관리자 정보가 존재하지 않습니다."));
+
+            Long areaId = viceAdminDetail.getArea().getId();
+
+            return villageHeadDetailRepository.findAllWithFarmerCountByAreaId(areaId);
         }
-        else throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
+        else {
+            throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)

@@ -5,10 +5,10 @@ import com.coffee.atom.domain.approval.EntityType;
 import com.coffee.atom.domain.approval.Method;
 import com.coffee.atom.domain.approval.ServiceType;
 import com.coffee.atom.domain.appuser.AppUser;
-import com.coffee.atom.dto.approval.ApprovalFarmerRequestDto;
-import com.coffee.atom.dto.approval.ApprovalTreesTransactionRequestDto;
-import com.coffee.atom.dto.approval.ApprovalVillageHeadRequestDto;
+import com.coffee.atom.dto.approval.*;
 import com.coffee.atom.service.AppUserService;
+import com.coffee.atom.service.PurchaseService;
+import com.coffee.atom.service.SectionService;
 import com.coffee.atom.service.TreesTransactionService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +24,8 @@ public class ApprovalFacadeService {
     private final AppUserService appUserService;
     private final ApprovalService approvalService;
     private final TreesTransactionService treesTransactionService;
+    private final PurchaseService purchaseService;
+    private final SectionService sectionService;
 
     /**
      * 두 서비스를 Transaction으로 묶어 exception 발생 시 전체 프로세스를 rollback
@@ -85,4 +87,43 @@ public class ApprovalFacadeService {
                 )
         );
     }
+
+    @Transactional
+    public void processPurchaseCreation(
+            AppUser requester,
+            Long approverId,
+            ApprovalPurchaseRequestDto dto
+    ) throws JsonProcessingException{
+        Long appUserId = purchaseService.requestApprovalToCreatePurchase(requester, dto);
+        approvalService.requestApproval(
+                requester,
+                approverId,
+                dto,
+                Method.CREATE,
+                ServiceType.TREES_TRANSACTION,
+                List.of(
+                    new EntityReference(EntityType.PURCHASE, appUserId)
+                )
+        );
+    }
+
+    @Transactional
+    public void processSectionCreation(
+            AppUser requester,
+            Long approverId,
+            ApprovalSectionRequestDto dto
+    ) throws JsonProcessingException{
+        Long appUserId = sectionService.requestApprovalToCreateSection(requester, dto);
+        approvalService.requestApproval(
+                requester,
+                approverId,
+                dto,
+                Method.CREATE,
+                ServiceType.SECTION,
+                List.of(
+                    new EntityReference(EntityType.SECTION, appUserId)
+                )
+        );
+    }
+
 }

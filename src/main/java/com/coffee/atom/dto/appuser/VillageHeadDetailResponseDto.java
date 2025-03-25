@@ -1,6 +1,6 @@
 package com.coffee.atom.dto.appuser;
 
-import com.coffee.atom.domain.Section;
+import com.coffee.atom.domain.area.Section;
 import lombok.Builder;
 import lombok.Data;
 

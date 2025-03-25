@@ -3,16 +3,16 @@ package com.coffee.atom.domain;
 import com.coffee.atom.domain.appuser.AppUser;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "purchase")
 @Getter
-@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Purchase {
@@ -26,7 +26,7 @@ public class Purchase {
     private AppUser manager; // 담당자 (부 관리자)
 
     @Column(name = "purchase_date", nullable = false)
-    private LocalDateTime purchaseDate;
+    private LocalDate purchaseDate;
 
     @Column(name = "quantity", nullable = false)
     private Long quantity;

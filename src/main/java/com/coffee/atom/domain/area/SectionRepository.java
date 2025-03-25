@@ -1,4 +1,4 @@
-package com.coffee.atom.domain;
+package com.coffee.atom.domain.area;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

@@ -5,10 +5,13 @@ import lombok.Data;
 
 @Data
 public class ApprovalSectionRequestDto {
-    @Parameter(description = "지역의 경도")
+    private Long id;
+    @Parameter(description = "섹션의 경도")
     private Double longitude;
-    @Parameter(description = "지역의 위도")
+    @Parameter(description = "섹션의 위도")
     private Double latitude;
-    @Parameter(description = "지역 명")
+    @Parameter(description = "섹션 명")
     private String sectionName;
+    @Parameter(description = "지역 ID")
+    private Long areaId;
 }
