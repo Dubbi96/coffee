@@ -184,7 +184,7 @@ public class ApprovalController {
             @Parameter(description = "승인자 ADMIN ID")
             @RequestParam("approverId") Long approverId,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "수매 내역 등록 정보<br>" +
+                    description = "섹션 등록 정보<br>" +
                             "- <b>id</b>: ⚠️타 서비스에 사용할 필드로 해당 서비스에서는 사용하지 않음<br>" +
                             "- <b>longitude</b>: 섹션의 경도<br>" +
                             "- <b>latitude</b>: 섹션의 위도<br>" +
