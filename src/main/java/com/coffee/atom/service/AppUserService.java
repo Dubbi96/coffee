@@ -173,14 +173,15 @@ public class AppUserService {
         String bankbookUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getBankbookPhoto(), directory, appUser);
 
         VillageHeadDetail newVillageHead = VillageHeadDetail.builder()
-            .appUser(newUser)
-            .accountInfo(approvalVillageHeadRequestDto.getAccountInfo())
-            .bankbookUrl(bankbookUrl)
-            .contractUrl(contractUrl)
-            .identificationPhotoUrl(identificationUrl)
-            .section(sectionRepository.findById(approvalVillageHeadRequestDto.getSectionId())
-                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Section 입니다.")))
-            .build();
+                .appUser(newUser)
+                .accountInfo(approvalVillageHeadRequestDto.getAccountInfo())
+                .bankName(approvalVillageHeadRequestDto.getBankName())
+                .bankbookUrl(bankbookUrl)
+                .contractUrl(contractUrl)
+                .identificationPhotoUrl(identificationUrl)
+                .section(sectionRepository.findById(approvalVillageHeadRequestDto.getSectionId())
+                        .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Section 입니다.")))
+                .build();
         appUserRepository.save(newUser);
         villageHeadDetailRepository.save(newVillageHead);
         return newUser.getId();

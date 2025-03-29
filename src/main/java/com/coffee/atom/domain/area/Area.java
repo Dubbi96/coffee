@@ -3,6 +3,7 @@ package com.coffee.atom.domain.area;
 import com.coffee.atom.domain.appuser.ViceAdminDetail;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -12,6 +13,7 @@ import java.util.List;
 @Entity
 @Table(name = "area")
 @Getter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Area {

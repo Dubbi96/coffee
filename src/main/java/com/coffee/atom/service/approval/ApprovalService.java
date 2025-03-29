@@ -5,6 +5,8 @@ import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.domain.approval.*;
 import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.domain.appuser.AppUserRepository;
+import com.coffee.atom.domain.appuser.Role;
+import com.coffee.atom.domain.appuser.ViceAdminDetailRepository;
 import com.coffee.atom.dto.approval.ApprovalResponseDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,6 +27,7 @@ public class ApprovalService {
     private final RequestedInstanceRepository requestedInstanceRepository;
     private final AppUserRepository appUserRepository;
     private final ObjectMapper objectMapper;
+    private final ViceAdminDetailRepository viceAdminDetailRepository;
 
     @Transactional
     public void requestApproval(AppUser requester,
@@ -63,19 +66,43 @@ public class ApprovalService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ApprovalResponseDto> findApprovals(List<Status> statuses, List<ServiceType> serviceTypes, Pageable pageable, AppUser appUser) {
+    public Page<ApprovalResponseDto> findApprovals(
+        List<Status> statuses,
+        List<ServiceType> serviceTypes,
+        Pageable pageable,
+        AppUser appUser
+    ) {
         Specification<Approval> spec = Specification.where(null);
 
+        Role role = appUser.getRole();
+
+        switch (role) {
+            case ADMIN -> {
+                // 전체 접근 (필터 그대로 적용)
+            }
+            case VICE_ADMIN_HEAD_OFFICER -> {
+                // 나 또는 같은 Area의 농림부 부관리자 요청만
+                Long myId = appUser.getId();
+                Long areaId = viceAdminDetailRepository.findAreaIdByAppUser_Id(myId)
+                        .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND.getMessage()));
+                List<Long> requesterIds = viceAdminDetailRepository.findViceAdminUserIdsByAreaId(areaId);
+                spec = spec.and((root, query, cb) -> root.get("requester").get("id").in(requesterIds));
+            }
+            case VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ->
+                    spec = spec.and((root, query, cb) -> cb.equal(root.get("requester"), appUser));
+            default -> throw new CustomException("해당 권한으로 요청 목록을 조회할 수 없습니다.");
+        }
+
+        // 공통 필터
         if (statuses != null && !statuses.isEmpty()) {
             spec = spec.and((root, query, cb) -> root.get("status").in(statuses));
         }
-
         if (serviceTypes != null && !serviceTypes.isEmpty()) {
             spec = spec.and((root, query, cb) -> root.get("serviceType").in(serviceTypes));
         }
 
         return approvalRepository.findAll(spec, pageable)
-                .map(ApprovalResponseDto::from);
+                                 .map(ApprovalResponseDto::from);
     }
 
 

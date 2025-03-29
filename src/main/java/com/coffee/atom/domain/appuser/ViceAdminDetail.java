@@ -26,7 +26,7 @@ public class ViceAdminDetail {
     @ManyToOne(fetch = FetchType.LAZY)
     private Area area;
 
-    @Column(name = "id_card_url", nullable = false)
+    @Column(name = "id_card_url")
     private String idCardUrl;
 
     public ViceAdminDetail updateIdCardUrl(String idCardUrl) {

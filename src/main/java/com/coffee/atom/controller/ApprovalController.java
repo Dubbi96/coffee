@@ -28,7 +28,7 @@ public class ApprovalController {
     private final ApprovalFacadeService approvalFacadeService;
     private final ApprovalService approvalService;
 
-    @GetMapping("/approvals")
+    @GetMapping()
     @Operation(
         summary = "요청 목록 조회",
         description = "<b>승인 요청 목록을 상태 및 서비스 타입으로 필터링</b><br>" +
@@ -38,7 +38,14 @@ public class ApprovalController {
     public Page<ApprovalResponseDto> getApprovals(
             @RequestParam(value = "statuses", required = false) List<Status> statuses,
             @RequestParam(value = "serviceTypes", required = false) List<ServiceType> serviceTypes,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @PageableDefault(sort = "id", direction = Sort.Direction.DESC)
+            @Parameter(description = "페이지네이션과 정렬 정보",
+                    example = "{\n" +
+                            "  \"page\": 0,\n" +
+                            "  \"size\": 1,\n" +
+                            "  \"sort\": \"id\"\n" +
+                            "}")
+            Pageable pageable,
             @LoginAppUser AppUser appUser
     ) {
         return approvalService.findApprovals(statuses, serviceTypes, pageable, appUser);
@@ -68,7 +75,7 @@ public class ApprovalController {
             @RequestParam(value = "bankName", required = false) String bankName,
             @Parameter(description = "계좌번호")
             @RequestParam(value = "accountInfo", required = false) String accountInfo,
-            @Parameter(description = "배정 할 지역 ID")
+            @Parameter(description = "배정 할 Section ID")
             @RequestParam("sectionId") Long sectionId,
             @Parameter(description = "승인자 ADMIN ID")
             @RequestParam("approverId") Long approverId,

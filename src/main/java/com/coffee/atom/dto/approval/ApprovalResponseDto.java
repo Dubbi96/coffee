@@ -22,6 +22,7 @@ public class ApprovalResponseDto {
         return ApprovalResponseDto.builder()
                 .id(approval.getId())
                 .requesterName(approval.getRequester().getUsername())
+                .approverName(approval.getApprover().getUsername())
                 .status(approval.getStatus())
                 .serviceType(approval.getServiceType())
                 .createdAt(approval.getCreatedAt())
