@@ -3,6 +3,7 @@ package com.coffee.atom.domain;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -25,7 +26,7 @@ public class TreesTransaction {
     private String species;
 
     @Column(name = "received_date", nullable = false)
-    private LocalDateTime receivedDate;
+    private LocalDate receivedDate;
 
     @Column(name = "quantity", nullable = false)
     private Long quantity;

@@ -189,7 +189,7 @@ public class ApprovalController {
                             "- <b>longitude</b>: 섹션의 경도<br>" +
                             "- <b>latitude</b>: 섹션의 위도<br>" +
                             "- <b>sectionName</b>: 섹션 명<br>" +
-                            "- <b>areaId</b>: 지역 ID<br>",
+                            "- <b>areaId</b>: ⚠️부 관리자의 경우 지역 ID 입력 하더라도 본인이 배정된 Area만 사용 가능<br>",
                     required = true
             )
             @RequestBody ApprovalSectionRequestDto approvalSectionRequestDto,

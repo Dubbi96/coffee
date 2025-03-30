@@ -3,7 +3,7 @@ package com.coffee.atom.dto.approval;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.Data;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 public class ApprovalTreesTransactionRequestDto {
@@ -11,7 +11,7 @@ public class ApprovalTreesTransactionRequestDto {
     @Parameter(description = "나무 수량")
     private Long quantity;
     @Parameter(description = "수령 일자")
-    private LocalDateTime receivedDate;
+    private LocalDate receivedDate;
     @Parameter(description = "나무 종")
     private String species;
     @Parameter(description = "수령 한 농부 ID")
