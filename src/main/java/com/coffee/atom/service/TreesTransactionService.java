@@ -22,6 +22,7 @@ public class TreesTransactionService {
     public Long requestApprovalToCreateTreesTransaction(ApprovalTreesTransactionRequestDto approvalTreesTransactionRequestDto) {
         Farmer farmer = farmerRepository.findById(approvalTreesTransactionRequestDto.getFarmerId())
                 .orElseThrow(()-> new CustomException(ErrorValue.FARMER_NOT_FOUND.getMessage()));
+        if(!farmer.getIsApproved()) throw new CustomException(ErrorValue.FARMER_NOT_FOUND.getMessage());
         TreesTransaction treesTransaction = TreesTransaction.builder()
                 .farmer(farmer)
                 .species(approvalTreesTransactionRequestDto.getSpecies())

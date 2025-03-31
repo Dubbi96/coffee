@@ -45,4 +45,8 @@ public class Purchase {
 
     @Column(name = "is_approved")
     private Boolean isApproved;
+
+    public void approveInstance() {
+        this.isApproved = true;
+    }
 }

@@ -32,8 +32,9 @@ public class ApprovalController {
     @Operation(
         summary = "요청 목록 조회",
         description = "<b>승인 요청 목록을 상태 및 서비스 타입으로 필터링</b><br>" +
-                      "다중 선택 필터 및 페이지네이션 지원<br>" +
-                      "예: ?statuses=PENDING&statuses=APPROVED&serviceTypes=PURCHASE&page=0&size=10"
+                "다중 선택 필터 및 페이지네이션 지원<br>" +
+                "예: ?statuses=PENDING&statuses=APPROVED&serviceTypes=PURCHASE&page=0&size=10<br>" +
+                "ADMIN 계정으로 서비스 호출 할 경우, 본인이 승인자로 지정 된 요청만 가져옴"
     )
     public Page<ApprovalResponseDto> getApprovals(
             @RequestParam(value = "statuses", required = false) List<Status> statuses,
@@ -49,6 +50,43 @@ public class ApprovalController {
             @LoginAppUser AppUser appUser
     ) {
         return approvalService.findApprovals(statuses, serviceTypes, pageable, appUser);
+    }
+
+    @PatchMapping("/approve/{approvalId}")
+    @Operation(
+        summary = "요청 승인 처리 1️⃣ 총 관리자",
+        description = "<b>approvalId를 갖는 요청 승인 처리</b><br>" +
+                "요청이 없을 경우 적용되지 않음<br>" +
+                "현재 update는 아직 안됨(현재 UPDATE 요청 서비스 없음)<br>"
+    )
+    public void approveApproval(@PathVariable("approvalId") Long approvalId) {
+        approvalService.processApproval(approvalId);
+    }
+
+    @PatchMapping("/reject/{approvalId}")
+    @Operation(
+        summary = "요청 거절 처리 1️⃣ 총 관리자",
+        description = "<b>approvalId를 갖는 요청 거절 처리</b><br>" +
+                "요청이 없을 경우 적용되지 않음<br>" +
+                "거절 사유를 입력해야하며, <br>" +
+                "**삭제** 요청에 대한 거절 처리의 경우 해당 인스턴스가 다시 목록에서 조회됨<br>" +
+                "**수정** 요청의 경우 DB상 변동 없음<br>" +
+                "**생성** 요청의 경우 템플릿 남기지 않고 DB에 생성 대기 중인 인스턴스 삭제"
+    )
+    public void approveApproval(@PathVariable("approvalId") Long approvalId, @RequestBody RejectApprovalRequestDto rejectApprovalRequestDto) {
+        approvalService.rejectApproval(approvalId, rejectApprovalRequestDto.getRejectedReason());
+    }
+
+    @GetMapping("/{approvalId}")
+    @Operation(
+        summary = "요청 상세 조회 1️⃣ 총 관리자 2️⃣ 부 관리자",
+        description = "<b>approvalId에 해당하는 요청 상세 정보를 조회</b><br>" +
+                  "<b>Approval</b> 테이블의 요청 데이터를 기준으로 반환<br>" +
+                  "<b>요청 유형(EntityType)</b>에 따라 응답 형태(DTO) 변경<br>" +
+                  "요청 상태(<b>Status</b>)는 <code>PENDING</code>, <code>APPROVED</code>, <code>REJECTED</code>"
+    )
+    public ApprovalDetailResponse getApprovalDetail(@PathVariable("approvalId") Long approvalId) {
+        return approvalService.getApprovalDetail(approvalId);
     }
 
     @PostMapping(value = "/village-head", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

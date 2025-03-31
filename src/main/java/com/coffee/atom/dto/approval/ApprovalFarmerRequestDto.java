@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class ApprovalFarmerRequestDto {
     @JsonIgnore
     private MultipartFile identificationPhoto;
+    private String identificationPhotoUrl;
     private String name;
     @NotNull
     private Long villageHeadId;

@@ -67,4 +67,8 @@ public class AppUser {
         this.username = userName;
     }
 
+    public void approveInstance() {
+        this.isApproved = true;
+    }
+
 }

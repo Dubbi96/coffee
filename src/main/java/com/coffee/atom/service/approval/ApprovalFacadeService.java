@@ -36,7 +36,7 @@ public class ApprovalFacadeService {
             Long approverId,
             ApprovalVillageHeadRequestDto dto
     ) throws JsonProcessingException {
-        Long appUserId = appUserService.requestApprovalToCreateVillageHead(requester, dto);
+        dto = appUserService.requestApprovalToCreateVillageHead(requester, dto);
         approvalService.requestApproval(
                 requester,
                 approverId,
@@ -44,8 +44,8 @@ public class ApprovalFacadeService {
                 Method.CREATE,
                 ServiceType.VILLAGE_HEAD,
                 List.of(
-                    new EntityReference(EntityType.APP_USER, appUserId),
-                    new EntityReference(EntityType.VILLAGE_HEAD_DETAIL, appUserId)
+                    new EntityReference(EntityType.APP_USER, dto.getId()),
+                    new EntityReference(EntityType.VILLAGE_HEAD_DETAIL, dto.getId())
                 )
         );
     }
@@ -56,7 +56,7 @@ public class ApprovalFacadeService {
             Long approverId,
             ApprovalFarmerRequestDto dto
     ) throws JsonProcessingException{
-        Long appUserId = appUserService.requestApprovalToCreateFarmer(requester, dto);
+        dto = appUserService.requestApprovalToCreateFarmer(requester, dto);
         approvalService.requestApproval(
                 requester,
                 approverId,
@@ -64,7 +64,7 @@ public class ApprovalFacadeService {
                 Method.CREATE,
                 ServiceType.FARMER,
                 List.of(
-                    new EntityReference(EntityType.FARMER, appUserId)
+                    new EntityReference(EntityType.FARMER, dto.getId())
                 )
         );
     }
@@ -94,15 +94,15 @@ public class ApprovalFacadeService {
             Long approverId,
             ApprovalPurchaseRequestDto dto
     ) throws JsonProcessingException{
-        Long appUserId = purchaseService.requestApprovalToCreatePurchase(requester, dto);
+        dto = purchaseService.requestApprovalToCreatePurchase(requester, dto);
         approvalService.requestApproval(
                 requester,
                 approverId,
                 dto,
                 Method.CREATE,
-                ServiceType.TREES_TRANSACTION,
+                ServiceType.PURCHASE,
                 List.of(
-                    new EntityReference(EntityType.PURCHASE, appUserId)
+                    new EntityReference(EntityType.PURCHASE, dto.getId())
                 )
         );
     }
@@ -113,7 +113,7 @@ public class ApprovalFacadeService {
             Long approverId,
             ApprovalSectionRequestDto dto
     ) throws JsonProcessingException{
-        Long appUserId = sectionService.requestApprovalToCreateSection(requester, dto);
+        dto = sectionService.requestApprovalToCreateSection(requester, dto);
         approvalService.requestApproval(
                 requester,
                 approverId,
@@ -121,7 +121,7 @@ public class ApprovalFacadeService {
                 Method.CREATE,
                 ServiceType.SECTION,
                 List.of(
-                    new EntityReference(EntityType.SECTION, appUserId)
+                    new EntityReference(EntityType.SECTION, dto.getId())
                 )
         );
     }

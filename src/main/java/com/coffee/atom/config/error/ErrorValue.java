@@ -13,9 +13,8 @@ public enum ErrorValue {
     ACCOUNT_NOT_FOUND("존재하지 않는 계정입니다."),
     AREA_NOT_FOUND("존재하지 않는 지역입니다."),
     FARMER_NOT_FOUND("해당 농부는 존재하지 않습니다."),
-    SUBJECT_NOT_FOUND("존재하지 않는 종목입니다."),
-    EMAIL_ALREADY_EXISTS("이미 존재하는 이메일입니다."),
-    SENSOR_NOT_FOUND("존재하지 않는 센서 입니다."),
+    SECTION_NOT_FOUND("해당 섹션은 존재하지 않습니다."),
+    SUBJECT_NOT_FOUND("존재하지 않는 요청입니다."),
 
     USER_KEY_ALREADY_EXISTS("이미 존재하는 외부 유저입니다."),
     NICKNAME_ALREADY_EXISTS("이미 존재하는 닉네임입니다."),
@@ -32,7 +31,6 @@ public enum ErrorValue {
 
     WRONG_EMAIL("잘못된 양식의 이메일입니다."),
 
-    USER_COUPON_NOT_FOUND("존재하지 않는 유저의 쿠폰입니다."),
     RETRY_WITH_KAKAO("카카오 소셜로그인을 이용해주세요."),
     RETRY_WITH_APPLE("애플 소셜로그인을 이용해주세요."),
     WRONG_EMAIL_ADDRESS("잘못된 이메일 주소입니다.");

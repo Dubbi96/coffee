@@ -33,4 +33,8 @@ public class TreesTransaction {
 
     @Column(name = "is_approved")
     private Boolean isApproved;
+
+    public void approveInstance() {
+        this.isApproved = true;
+    }
 }

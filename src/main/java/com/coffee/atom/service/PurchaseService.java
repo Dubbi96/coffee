@@ -17,9 +17,8 @@ public class PurchaseService {
     private final PurchaseRepository purchaseRepository;
 
     @Transactional
-    public Long requestApprovalToCreatePurchase(AppUser requester, ApprovalPurchaseRequestDto approvalPurchaseRequestDto) {
+    public ApprovalPurchaseRequestDto requestApprovalToCreatePurchase(AppUser requester, ApprovalPurchaseRequestDto approvalPurchaseRequestDto) {
         if(requester.getRole() != Role.VICE_ADMIN_HEAD_OFFICER) throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
-
         Purchase purchase = Purchase.builder()
                 .manager(requester)
                 .purchaseDate(approvalPurchaseRequestDto.getPurchaseDate())
@@ -30,6 +29,7 @@ public class PurchaseService {
                 .paymentAmount(approvalPurchaseRequestDto.getPaymentAmount())
                 .build();
         purchaseRepository.save(purchase);
-        return purchase.getId();
+        approvalPurchaseRequestDto.setId(purchase.getId());
+        return approvalPurchaseRequestDto;
     }
 }

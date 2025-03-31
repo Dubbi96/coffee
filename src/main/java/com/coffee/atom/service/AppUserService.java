@@ -5,8 +5,9 @@ import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.config.security.JwtProvider;
 import com.coffee.atom.domain.Farmer;
 import com.coffee.atom.domain.FarmerRepository;
-import com.coffee.atom.domain.area.SectionRepository;
 import com.coffee.atom.domain.appuser.*;
+import com.coffee.atom.domain.area.Section;
+import com.coffee.atom.domain.area.SectionRepository;
 import com.coffee.atom.dto.approval.ApprovalFarmerRequestDto;
 import com.coffee.atom.dto.approval.ApprovalVillageHeadRequestDto;
 import com.coffee.atom.dto.appuser.*;
@@ -19,7 +20,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,6 +40,7 @@ public class AppUserService {
     public SignInResponseDto login(SignInRequestDto accountRequestDto) {
         AppUser appUser = appUserRepository.findByUserId(accountRequestDto.getUserId())
                 .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
+        if(appUser.getIsApproved() == null || !appUser.getIsApproved()) throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage());
         if (!passwordEncoder.matches(accountRequestDto.getPassword() + appUser.getSalt(), appUser.getPassword()))
             throw new CustomException("올바르지 않은 아이디 및 비밀번호입니다.");
         return new SignInResponseDto(appUser, jwtProvider.createAccessToken(appUser.getId()));
@@ -152,7 +153,7 @@ public class AppUserService {
     }
 
     @Transactional
-    public Long requestApprovalToCreateVillageHead(AppUser appUser, ApprovalVillageHeadRequestDto approvalVillageHeadRequestDto) {
+    public ApprovalVillageHeadRequestDto requestApprovalToCreateVillageHead(AppUser appUser, ApprovalVillageHeadRequestDto approvalVillageHeadRequestDto) {
         appUserRepository.findByUsername(approvalVillageHeadRequestDto.getUserId()).ifPresent(villageHead -> {
             throw new IllegalArgumentException(ErrorValue.NICKNAME_ALREADY_EXISTS.toString());
         });
@@ -172,6 +173,9 @@ public class AppUserService {
         String contractUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getContractFile(), directory, appUser);
         String bankbookUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getBankbookPhoto(), directory, appUser);
 
+        Section section = sectionRepository.findById(approvalVillageHeadRequestDto.getSectionId())
+                        .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Section 입니다."));
+        if(!section.getIsApproved()) throw new CustomException(ErrorValue.SECTION_NOT_FOUND.getMessage());
         VillageHeadDetail newVillageHead = VillageHeadDetail.builder()
                 .appUser(newUser)
                 .accountInfo(approvalVillageHeadRequestDto.getAccountInfo())
@@ -179,18 +183,22 @@ public class AppUserService {
                 .bankbookUrl(bankbookUrl)
                 .contractUrl(contractUrl)
                 .identificationPhotoUrl(identificationUrl)
-                .section(sectionRepository.findById(approvalVillageHeadRequestDto.getSectionId())
-                        .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Section 입니다.")))
+                .section(section)
                 .build();
         appUserRepository.save(newUser);
         villageHeadDetailRepository.save(newVillageHead);
-        return newUser.getId();
+        approvalVillageHeadRequestDto.setId(newUser.getId());
+        approvalVillageHeadRequestDto.setIdentificationPhotoUrl(identificationUrl);
+        approvalVillageHeadRequestDto.setContractFileUrl(contractUrl);
+        approvalVillageHeadRequestDto.setBankbookPhotoUrl(bankbookUrl);
+        return approvalVillageHeadRequestDto;
     }
 
     @Transactional
-    public Long requestApprovalToCreateFarmer(AppUser appUser, ApprovalFarmerRequestDto approvalFarmerRequestDto) {
+    public ApprovalFarmerRequestDto requestApprovalToCreateFarmer(AppUser appUser, ApprovalFarmerRequestDto approvalFarmerRequestDto) {
         VillageHeadDetail villageHeadDetail = villageHeadDetailRepository.findById(approvalFarmerRequestDto.getVillageHeadId())
                 .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
+        if(!villageHeadDetail.getIsApproved()) throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage());
         String directory = "farmer/";
         String identificationUrl = uploadFileIfPresent(approvalFarmerRequestDto.getIdentificationPhoto(), directory, appUser);
         Farmer farmer = Farmer.builder()
@@ -199,7 +207,9 @@ public class AppUserService {
                 .identificationPhotoUrl(identificationUrl)
                 .build();
         farmerRepository.save(farmer);
-        return farmer.getId();
+        approvalFarmerRequestDto.setId(farmer.getId());
+        approvalFarmerRequestDto.setIdentificationPhotoUrl(identificationUrl);
+        return approvalFarmerRequestDto;
     }
 
     private String uploadFileIfPresent(MultipartFile file, String directory, AppUser uploader) {

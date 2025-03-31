@@ -41,4 +41,8 @@ public class VillageHeadDetail {
 
     @Column(name = "is_approved")
     private Boolean isApproved;
+
+    public void approveInstance() {
+        this.isApproved = true;
+    }
 }

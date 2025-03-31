@@ -24,7 +24,7 @@ public class SectionService {
     private final ViceAdminDetailRepository viceAdminDetailRepository;
 
     @Transactional
-    public Long requestApprovalToCreateSection(AppUser requester, ApprovalSectionRequestDto approvalSectionRequestDto) {
+    public ApprovalSectionRequestDto requestApprovalToCreateSection(AppUser requester, ApprovalSectionRequestDto approvalSectionRequestDto) {
         if(requester.getRole().equals(Role.VILLAGE_HEAD)) throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
         ViceAdminDetail viceAdminDetail = viceAdminDetailRepository.findById(requester.getId()).orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
         if(viceAdminDetail.getArea() == null) throw new CustomException(ErrorValue.AREA_NOT_FOUND.getMessage());
@@ -36,7 +36,8 @@ public class SectionService {
                 .area(viceAdminDetail.getArea())
                 .build();
         sectionRepository.save(section);
-        return section.getId();
+        approvalSectionRequestDto.setId(section.getId());
+        return approvalSectionRequestDto;
     }
 
     @Transactional
