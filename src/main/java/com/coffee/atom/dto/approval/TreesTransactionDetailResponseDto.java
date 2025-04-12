@@ -16,6 +16,7 @@ import java.time.LocalDate;
 public class TreesTransactionDetailResponseDto implements ApprovalDetailResponse {
     private Long id;
     private String species;
+    private Long farmerId;
     private Long quantity;
     private LocalDate receivedDate;
     private Status status;
