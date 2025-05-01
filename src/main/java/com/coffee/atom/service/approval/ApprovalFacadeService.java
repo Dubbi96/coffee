@@ -75,7 +75,7 @@ public class ApprovalFacadeService {
             Long approverId,
             ApprovalTreesTransactionRequestDto dto
     ) throws JsonProcessingException{
-        Long appUserId = treesTransactionService.requestApprovalToCreateTreesTransaction(dto);
+        dto = treesTransactionService.requestApprovalToCreateTreesTransaction(dto);
         approvalService.requestApproval(
                 requester,
                 approverId,
@@ -83,7 +83,7 @@ public class ApprovalFacadeService {
                 Method.CREATE,
                 ServiceType.TREES_TRANSACTION,
                 List.of(
-                    new EntityReference(EntityType.TREES_TRANSACTION, appUserId)
+                    new EntityReference(EntityType.TREES_TRANSACTION, dto.getId())
                 )
         );
     }

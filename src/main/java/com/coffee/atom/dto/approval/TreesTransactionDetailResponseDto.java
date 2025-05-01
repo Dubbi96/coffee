@@ -18,7 +18,7 @@ public class TreesTransactionDetailResponseDto implements ApprovalDetailResponse
     private String species;
     private Long farmerId;
     private Long quantity;
-    private LocalDate receivedDate;
+    private String receivedDate;
     private Status status;
     private ServiceType serviceType;
     private String rejectedReason;

@@ -12,6 +12,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ApprovalService {
@@ -289,6 +291,7 @@ public class ApprovalService {
                 case TREES_TRANSACTION -> fromJson(json, TreesTransactionDetailResponseDto.class, type, status, rejectedReason);
             };
         } catch (JsonProcessingException e) {
+            log.error("❌ JSON 파싱 실패! 원본: {}", json);
             throw new CustomException("요청 데이터를 파싱할 수 없습니다.");
         }
     }

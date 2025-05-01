@@ -19,7 +19,7 @@ public class TreesTransactionService {
     private final FarmerRepository farmerRepository;
 
     @Transactional
-    public Long requestApprovalToCreateTreesTransaction(ApprovalTreesTransactionRequestDto approvalTreesTransactionRequestDto) {
+    public ApprovalTreesTransactionRequestDto requestApprovalToCreateTreesTransaction(ApprovalTreesTransactionRequestDto approvalTreesTransactionRequestDto) {
         Farmer farmer = farmerRepository.findById(approvalTreesTransactionRequestDto.getFarmerId())
                 .orElseThrow(()-> new CustomException(ErrorValue.FARMER_NOT_FOUND.getMessage()));
         if(!farmer.getIsApproved()) throw new CustomException(ErrorValue.FARMER_NOT_FOUND.getMessage());
@@ -30,6 +30,7 @@ public class TreesTransactionService {
                 .quantity(approvalTreesTransactionRequestDto.getQuantity())
                 .build();
         treesTransactionRepository.save(treesTransaction);
-        return treesTransaction.getId();
+        approvalTreesTransactionRequestDto.setId(treesTransaction.getId());
+        return approvalTreesTransactionRequestDto;
     }
 }
