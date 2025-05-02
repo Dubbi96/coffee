@@ -222,4 +222,45 @@ public class AppUserService {
         }
         return null;
     }
+
+    @Transactional
+    public ApprovalVillageHeadRequestDto requestApprovalToUpdateVillageHead(AppUser appUser, ApprovalVillageHeadRequestDto approvalVillageHeadRequestDto) {
+        AppUser targetUser = appUserRepository.findById(approvalVillageHeadRequestDto.getId())
+                .orElseThrow(() -> new CustomException("수정 대상 면장 사용자를 찾을 수 없습니다."));
+
+        VillageHeadDetail villageHead = villageHeadDetailRepository.findByAppUser(targetUser)
+                .orElseThrow(() -> new CustomException("면장 세부정보를 찾을 수 없습니다."));
+
+        if (approvalVillageHeadRequestDto.getPassword() != null && !approvalVillageHeadRequestDto.getPassword().isBlank()) {
+            String newSalt = UUID.randomUUID().toString();
+            String newPassword = passwordEncoder.encode(approvalVillageHeadRequestDto.getPassword() + newSalt);
+            targetUser.updatePassword(newPassword, newSalt);
+        }
+
+        String directory = "village-head/";
+        String newIdentificationUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getIdentificationPhoto(), directory, appUser);
+        String newContractUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getContractFile(), directory, appUser);
+        String newBankbookUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getBankbookPhoto(), directory, appUser);
+
+        if (newIdentificationUrl != null) villageHead.updateIdentificationPhotoUrl(newIdentificationUrl);
+        if (newContractUrl != null) villageHead.updateContractUrl(newContractUrl);
+        if (newBankbookUrl != null) villageHead.updateBankbookUrl(newBankbookUrl);
+
+        villageHead.updateAccountInfo(approvalVillageHeadRequestDto.getAccountInfo());
+        villageHead.updateBankName(approvalVillageHeadRequestDto.getBankName());
+
+        Section section = sectionRepository.findById(approvalVillageHeadRequestDto.getSectionId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Section 입니다."));
+        if (!section.getIsApproved()) throw new CustomException(ErrorValue.SECTION_NOT_FOUND.getMessage());
+        villageHead.updateSection(section);
+
+        appUserRepository.save(targetUser);
+        villageHeadDetailRepository.save(villageHead);
+
+        approvalVillageHeadRequestDto.setIdentificationPhotoUrl(villageHead.getIdentificationPhotoUrl());
+        approvalVillageHeadRequestDto.setContractFileUrl(villageHead.getContractUrl());
+        approvalVillageHeadRequestDto.setBankbookPhotoUrl(villageHead.getBankbookUrl());
+
+        return approvalVillageHeadRequestDto;
+    }
 }

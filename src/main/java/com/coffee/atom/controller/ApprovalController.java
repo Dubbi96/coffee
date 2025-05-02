@@ -240,4 +240,45 @@ public class ApprovalController {
         }
     }
 
+    @PatchMapping(value = "/village-head", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+        summary = "면장 수정 승인 요청 2️⃣ 부 관리자",
+        description = "<b>면장 계정 수정을 위한 승인 요청</b><br>" +
+                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
+                      "파일은 Multipart 형식으로 전송되며, 일부 항목은 생략 가능"
+    )
+    public void requestApprovalToUpdateVillageHead(
+            @Parameter(description = "면장 신원 확인 용 이미지")
+            @RequestPart(value = "identificationPhoto", required = false) MultipartFile identificationPhoto,
+            @Parameter(description = "계약서 파일")
+            @RequestPart(value = "contractFile", required = false) MultipartFile contractFile,
+            @Parameter(description = "통장 사본 이미지")
+            @RequestPart(value = "bankbookPhoto", required = false) MultipartFile bankbookPhoto,
+            @Parameter(description = "면장 ID")
+            @RequestParam("appUserId") Long id,
+            @Parameter(description = "면장 User ID")
+            @RequestParam("userId") String userId,
+            @Parameter(description = "면장 User명")
+            @RequestParam("username") String username,
+            @Parameter(description = "면장 비밀번호")
+            @RequestParam("password") String password,
+            @Parameter(description = "은행 명")
+            @RequestParam(value = "bankName", required = false) String bankName,
+            @Parameter(description = "계좌번호")
+            @RequestParam(value = "accountInfo", required = false) String accountInfo,
+            @Parameter(description = "배정 할 Section ID")
+            @RequestParam("sectionId") Long sectionId,
+            @Parameter(description = "승인자 ADMIN ID")
+            @RequestParam("approverId") Long approverId,
+            @LoginAppUser AppUser appUser
+    ){
+        ApprovalVillageHeadRequestDto approvalVillageHeadRequestDto =
+                new ApprovalVillageHeadRequestDto(id,userId,password,username,bankName,accountInfo,identificationPhoto,contractFile,bankbookPhoto,sectionId);
+        try {
+            approvalFacadeService.processVillageHeadUpdate(appUser, approverId, approvalVillageHeadRequestDto);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+        }
+    }
+
 }

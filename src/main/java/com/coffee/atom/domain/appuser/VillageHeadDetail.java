@@ -45,4 +45,28 @@ public class VillageHeadDetail {
     public void approveInstance() {
         this.isApproved = true;
     }
+
+    public void updateIdentificationPhotoUrl(String identificationPhotoUrl) {
+        this.identificationPhotoUrl = identificationPhotoUrl;
+    }
+
+    public void updateContractUrl(String contractUrl) {
+        this.contractUrl = contractUrl;
+    }
+
+    public void updateBankbookUrl(String bankbookUrl) {
+        this.bankbookUrl = bankbookUrl;
+    }
+
+    public void updateAccountInfo(String accountInfo) {
+        this.accountInfo = accountInfo;
+    }
+
+    public void updateBankName(String bankName) {
+        this.bankName = bankName;
+    }
+
+    public void updateSection(Section section) {
+        this.section = section;
+    }
 }

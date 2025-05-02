@@ -126,4 +126,23 @@ public class ApprovalFacadeService {
         );
     }
 
+    @Transactional
+    public void processVillageHeadUpdate(
+            AppUser requester,
+            Long approverId,
+            ApprovalVillageHeadRequestDto dto
+    ) throws JsonProcessingException{
+        dto = appUserService.requestApprovalToUpdateVillageHead(requester, dto);
+        approvalService.requestApproval(
+                requester,
+                approverId,
+                dto,
+                Method.UPDATE,
+                ServiceType.VILLAGE_HEAD,
+                List.of(
+                    new EntityReference(EntityType.VILLAGE_HEAD_DETAIL, dto.getId())
+                )
+        );
+    }
+
 }

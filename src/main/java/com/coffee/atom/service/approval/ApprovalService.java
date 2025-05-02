@@ -179,20 +179,44 @@ public class ApprovalService {
             try {
                 JsonNode jsonNode = new ObjectMapper().readTree(requestedData);
 
-                /*if (type == EntityType.FARMER) {
-                    Farmer farmer = farmerRepository.findById(id)
-                            .orElseThrow(() -> new CustomException(ErrorValue.FARMER_NOT_FOUND.getMessage()));
-                    if (jsonNode.has("name")) {
-                        farmer.setName(jsonNode.get("name").asText());
+                if (type == EntityType.VILLAGE_HEAD_DETAIL) {
+                    VillageHeadDetail villageHead = villageHeadDetailRepository.findById(id)
+                            .orElseThrow(() -> new CustomException("해당 VillageHeadDetail이 존재하지 않습니다."));
+
+                    // 계좌정보 및 은행명 업데이트
+                    if (jsonNode.has("accountInfo")) {
+                        villageHead.updateAccountInfo(jsonNode.get("accountInfo").asText());
                     }
+
+                    if (jsonNode.has("bankName")) {
+                        villageHead.updateBankName(jsonNode.get("bankName").asText());
+                    }
+
+                    // section 변경
                     if (jsonNode.has("sectionId")) {
                         Section section = sectionRepository.findById(jsonNode.get("sectionId").asLong())
-                                .orElseThrow(() -> new CustomException("Section 없음"));
-                        farmer.setSection(section);
+                                .orElseThrow(() -> new CustomException("Section이 존재하지 않습니다."));
+                        if (!section.getIsApproved()) {
+                            throw new CustomException("승인되지 않은 Section입니다.");
+                        }
+                        villageHead.updateSection(section);
                     }
-                }*/
 
-                // 필요 시 다른 EntityType 처리 가능
+                    // 식별 URL들 (옵셔널)
+                    if (jsonNode.has("identificationPhotoUrl")) {
+                        villageHead.updateIdentificationPhotoUrl(jsonNode.get("identificationPhotoUrl").asText());
+                    }
+                    if (jsonNode.has("contractFileUrl")) {
+                        villageHead.updateContractUrl(jsonNode.get("contractFileUrl").asText());
+                    }
+                    if (jsonNode.has("bankbookPhotoUrl")) {
+                        villageHead.updateBankbookUrl(jsonNode.get("bankbookPhotoUrl").asText());
+                    }
+
+                    villageHeadDetailRepository.save(villageHead);
+                }
+
+                // (추후 FARMER 등 다른 EntityType도 추가 가능)
 
             } catch (JsonProcessingException e) {
                 throw new CustomException("요청 데이터 파싱 실패");
