@@ -67,6 +67,7 @@ public class FarmerService {
         return FarmerResponseDto.builder()
                 .sectionName(sectionName)
                 .farmerName(farmer.getName())
+                .identificationPhotoUrl(farmer.getIdentificationPhotoUrl())
                 .treesTransactions(details)
                 .build();
     }

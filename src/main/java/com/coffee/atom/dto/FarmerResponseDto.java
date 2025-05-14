@@ -11,6 +11,7 @@ import java.util.List;
 public class FarmerResponseDto {
     private String sectionName;
     private String farmerName;
+    private String identificationPhotoUrl;
     private List<TreesTransactionDetail> treesTransactions;
 
     @Data
