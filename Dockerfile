@@ -14,9 +14,8 @@ COPY coffee-backend-key.json /app/coffee-backend-key.json
 
 COPY --from=stage1 /opt/app/target/Coffee-1.0.0.jar /app/Coffee-1.0.0.jar
 
-EXPOSE 8080  # ✅ Cloud Run이 감지할 수 있도록 포트 노출
+EXPOSE 8080
 
-# (선택) 환경변수에서 포트를 받을 경우 application.yml도 수정 필요
 ENV PORT=8080
 
 CMD ["java", "-jar", "/app/Coffee-1.0.0.jar"]
