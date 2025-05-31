@@ -9,14 +9,14 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
-# 환경 변수 설정
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/coffee-backend-key.json
 COPY coffee-backend-key.json /app/coffee-backend-key.json
 
-# 빌드된 JAR 파일 복사
 COPY --from=stage1 /opt/app/target/Coffee-1.0.0.jar /app/Coffee-1.0.0.jar
 
+EXPOSE 8080  # ✅ Cloud Run이 감지할 수 있도록 포트 노출
+
+# (선택) 환경변수에서 포트를 받을 경우 application.yml도 수정 필요
 ENV PORT=8080
-EXPOSE 8080
-# Cloud Run에서 자동 할당된 포트 사용하도록 설정
+
 CMD ["java", "-jar", "/app/Coffee-1.0.0.jar"]
