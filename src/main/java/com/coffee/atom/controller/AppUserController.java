@@ -19,7 +19,6 @@ import java.util.List;
 public class AppUserController {
     private final AppUserService appUserService;
 
-
     @PostMapping("/sign-in")
     public SignInResponseDto login(@RequestBody SignInRequestDto authRequest) {
         log.info("로그인 요청 받음: {}", authRequest.getUserId());
