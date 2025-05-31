@@ -49,9 +49,11 @@ jobs:
           --platform=managed \
           --region=asia-northeast3 \
           --allow-unauthenticated \
+          --service-account=my-cloud-service-account@tedserp.iam.gserviceaccount.com \
           --add-cloudsql-instances=tedserp:asia-northeast3:dubbi-coffee \
           --set-env-vars SPRING_PROFILES_ACTIVE=prod \
-          --set-env-vars GOOGLE_APPLICATION_CREDENTIALS=/app/coffee-backend-key.json
+          --set-env-vars GOOGLE_APPLICATION_CREDENTIALS=/app/coffee-backend-key.json \
+          --timeout=600s
 
     - name: 종료 시간 기록
       id: end_time
