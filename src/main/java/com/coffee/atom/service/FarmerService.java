@@ -6,16 +6,17 @@ import com.coffee.atom.domain.Farmer;
 import com.coffee.atom.domain.FarmerRepository;
 import com.coffee.atom.domain.TreesTransaction;
 import com.coffee.atom.domain.TreesTransactionRepository;
-import com.coffee.atom.domain.appuser.*;
+import com.coffee.atom.domain.appuser.AppUser;
+import com.coffee.atom.domain.appuser.Role;
+import com.coffee.atom.domain.appuser.ViceAdminDetail;
+import com.coffee.atom.domain.appuser.ViceAdminDetailRepository;
 import com.coffee.atom.dto.FarmerResponseDto;
 import com.coffee.atom.dto.FarmersResponseDto;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

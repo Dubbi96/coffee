@@ -281,4 +281,14 @@ public class ApprovalController {
         }
     }
 
+    @DeleteMapping(value = "/{approvalId}")
+    @Operation(
+        summary = "요청 삭제 2️⃣ 부 관리자",
+        description = "<b>요청 삭제</b><br>" +
+                      "본인이 요청한 경우에만 삭제 가능<br>" +
+                      "타인이 요청한 경우 UNAUTHORIZED_SERVICE 에러 발생"
+    )
+    public void deleteApproval(@PathVariable("approvalId") Long approvalId, @LoginAppUser AppUser appUser){
+        approvalService.deleteApproval(approvalId, appUser);
+    }
 }

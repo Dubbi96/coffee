@@ -320,6 +320,21 @@ public class ApprovalService {
         }
     }
 
+    @Transactional
+    public void deleteApproval(Long approvalId, AppUser appUser) {
+        // 1. Approval 엔티티 조회
+        Approval approval = approvalRepository.findById(approvalId)
+            .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+
+        // 2. 요청자 검증
+        if (!approval.getRequester().getId().equals(appUser.getId())) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED_SERVICE.getMessage());
+        }
+
+        // 3. 삭제
+        approvalRepository.delete(approval);
+    }
+
     private <T extends ApprovalDetailResponse> T fromJson(String json, Class<T> clazz, ServiceType type, Status status, String rejectedReason) throws JsonProcessingException {
         T dto = new ObjectMapper().readValue(json, clazz);
         dto.setStatus(status);

@@ -14,7 +14,7 @@ spring:
   jackson:
     time-zone: Asia/Seoul
   jwt:
-    secret-key: 697zRu8XSLLiiG-lXyCkDUBBIIIIIINiMdB25bb5333ezsO3716jnAGEgxDlHOAvTRP4pXI9B_aEPnkvsbw
+    secret-key: ${JWT_SECRET}
   servlet:
     multipart:
       maxFileSize: 100GB
@@ -41,11 +41,11 @@ springdoc:
 
 gcs:
   project:
-    id: dubbi-coffee
+    id: tedserp
   bucket:
-    name: dubbi-coffee
+    name: teds-coffee
 
 logging:
   discord:
-    webhook-url: https://discord.com/api/webhooks/1343491369313894411/Xbt3Eg7oyBZkgZIiahQrs3bufi0obajdigrFfTxMeaQDWckq-M0ihQdKFgVcc0qaLzHf
+    webhook-url: ${DISCORD_WEBHOOK}
   config: classpath:logback.xml

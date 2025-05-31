@@ -25,17 +25,17 @@ spring:
 spring:
   config:
     activate:
-      on-profile: prod, dev, local
+      on-profile: prod, dev
   datasource:
     hikari:
       username: postgres
-      password: "Di3o1GvF&dvmx(uu"
+      password: ${DB_PASSWORD}
       jdbc-url: jdbc:postgresql://google/coffee
       driver-class-name: org.postgresql.Driver
       data-source-properties:
-        cloudSqlInstance: dubbi-coffee:asia-northeast3:coffee
+        cloudSqlInstance: tedserp:asia-northeast3:dubbi-coffee
         socketFactory: com.google.cloud.sql.postgres.SocketFactory
-    url: jdbc:postgresql://google/coffee?cloudSqlInstance=dubbi-coffee:asia-northeast3:coffee&socketFactory=com.google.cloud.sql.postgres.SocketFactory
+    url: jdbc:postgresql://google/coffee?cloudSqlInstance=tedserp:asia-northeast3:dubbi-coffee&socketFactory=com.google.cloud.sql.postgres.SocketFactory
 
 ---
 spring:
