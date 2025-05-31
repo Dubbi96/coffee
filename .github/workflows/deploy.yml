@@ -53,7 +53,7 @@ jobs:
           --add-cloudsql-instances=tedserp:asia-northeast3:dubbi-coffee \
           --set-env-vars SPRING_PROFILES_ACTIVE=prod \
           --set-env-vars GOOGLE_APPLICATION_CREDENTIALS=/app/coffee-backend-key.json \
-          --timeout=600s
+          --set-env-vars "JWT_SECRET=${{ secrets.JWT_SECRET }},DISCORD_WEBHOOK=${{ secrets.DISCORD_WEBHOOK }},DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
 
     - name: 종료 시간 기록
       id: end_time
