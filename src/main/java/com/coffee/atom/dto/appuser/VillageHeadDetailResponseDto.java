@@ -1,5 +1,6 @@
 package com.coffee.atom.dto.appuser;
 
+import com.coffee.atom.domain.area.Area;
 import com.coffee.atom.domain.area.Section;
 import lombok.Builder;
 import lombok.Data;
@@ -13,7 +14,24 @@ public class VillageHeadDetailResponseDto {
     private String identificationPhotoUrl;
     private String contractFileUrl;
     private String bankbookPhotoUrl;
+    private AreaInfo areaInfo;
     private SectionInfo sectionInfo;
+
+    @Data
+    @Builder
+    public static class AreaInfo{
+        private Double longitude;
+        private Double latitude;
+        private String areaName;
+
+        public static VillageHeadDetailResponseDto.AreaInfo from(Area area){
+            return VillageHeadDetailResponseDto.AreaInfo.builder()
+                    .longitude(area.getLongitude())
+                    .latitude(area.getLatitude())
+                    .areaName(area.getAreaName())
+                    .build();
+        }
+    }
 
     @Data
     @Builder

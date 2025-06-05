@@ -148,6 +148,7 @@ public class AppUserService {
                 .identificationPhotoUrl(villageHeadDetail.getIdentificationPhotoUrl())
                 .contractFileUrl(villageHeadDetail.getContractUrl())
                 .bankbookPhotoUrl(villageHeadDetail.getBankbookUrl())
+                .areaInfo(VillageHeadDetailResponseDto.AreaInfo.from(villageHeadDetail.getSection().getArea()))
                 .sectionInfo(VillageHeadDetailResponseDto.SectionInfo.from((villageHeadDetail.getSection())))
                 .build();
     }
