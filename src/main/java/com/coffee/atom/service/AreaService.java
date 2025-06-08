@@ -35,9 +35,28 @@ public class AreaService {
     }
 
     @Transactional(readOnly = true)
-    public List<AreaSectionResponseDto> getAreaWithSections(AppUser appUser) {
-        return areaRepository.findAreaWithSections().stream()
+    public List<AreaSectionResponseDto> getAreasWithSections() {
+        return areaRepository.findAreasWithSections().stream()
                 .sorted(Comparator.comparing(Area::getAreaName, String.CASE_INSENSITIVE_ORDER))
+                .map(area -> AreaSectionResponseDto.builder()
+                        .id(area.getId())
+                        .areaName(area.getAreaName())
+                        .latitude(area.getLatitude())
+                        .longitude(area.getLongitude())
+                        .sections(
+                                area.getSections().stream()
+                                        .filter(section -> Boolean.TRUE.equals(section.getIsApproved()))
+                                        .sorted(Comparator.comparing(Section::getSectionName, String.CASE_INSENSITIVE_ORDER))
+                                        .map(AreaSectionResponseDto.Sections::from)
+                                        .toList()
+                        )
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AreaSectionResponseDto> getAreaWithSections(Long areaId) {
+        return areaRepository.findAreaWithSections(areaId).stream()
                 .map(area -> AreaSectionResponseDto.builder()
                         .id(area.getId())
                         .areaName(area.getAreaName())

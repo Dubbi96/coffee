@@ -41,10 +41,9 @@ public class AreaController {
                       "신규 지역 생성은 ADMIN 권한만 사용 가능<br>" +
                       "타 권한의 AppUser로 해당 서비스 호출 시 UNAUTHORIZED 메세지 반환"
     )
-    public List<AreaSectionResponseDto> getAreaWithSections(
-            @LoginAppUser AppUser appUser
+    public List<AreaSectionResponseDto> getAreasWithSections(
     ) {
-        return areaService.getAreaWithSections(appUser);
+        return areaService.getAreasWithSections();
     }
 
     @GetMapping()
@@ -59,5 +58,17 @@ public class AreaController {
             @LoginAppUser AppUser appUser
     ) {
         return areaService.getArea(appUser);
+    }
+
+    @GetMapping("/{areaId}/with-sections")
+    @Operation(
+        summary = "지역 내 섹션 조회",
+        description = "<b>지역 및 섹션 조회</b><br>" +
+                      "정렬 기준 1: 섹션 sectionName의 순서로 정렬"
+    )
+    public List<AreaSectionResponseDto> getAreaWithSections(
+            @PathVariable("areaId") Long areaId
+    ) {
+        return areaService.getAreaWithSections(areaId);
     }
 }
