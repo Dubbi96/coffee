@@ -36,7 +36,6 @@ public class AreaService {
 
     @Transactional(readOnly = true)
     public List<AreaSectionResponseDto> getAreaWithSections(AppUser appUser) {
-        if(!appUser.getRole().equals(Role.ADMIN)) throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
         return areaRepository.findAreaWithSections().stream()
                 .sorted(Comparator.comparing(Area::getAreaName, String.CASE_INSENSITIVE_ORDER))
                 .map(area -> AreaSectionResponseDto.builder()
@@ -57,7 +56,6 @@ public class AreaService {
 
     @Transactional(readOnly = true)
     public List<AreaResponseDto> getArea(AppUser appUser) {
-        if(!appUser.getRole().equals(Role.ADMIN)) throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
         return areaRepository.findAll().stream()
                 .sorted(Comparator.comparing(Area::getAreaName, String.CASE_INSENSITIVE_ORDER))
                 .map(area -> AreaResponseDto.builder()

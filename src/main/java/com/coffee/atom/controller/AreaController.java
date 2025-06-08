@@ -34,7 +34,7 @@ public class AreaController {
 
     @GetMapping("/with-sections")
     @Operation(
-        summary = "지역 및 섹션 조회 1️⃣ 총 관리자",
+        summary = "지역 및 섹션 조회",
         description = "<b>지역 및 섹션 조회</b><br>" +
                       "정렬 기준 1: 지역은 areaName의 순서로 정렬<br>" +
                       "정렬 기준 2: 섹션또한 sectionName의 순서로 정렬"+
@@ -49,7 +49,7 @@ public class AreaController {
 
     @GetMapping()
     @Operation(
-        summary = "지역만 조회 1️⃣ 총 관리자",
+        summary = "지역만 조회",
         description = "<b>지역 조회</b><br>" +
                       "정렬 기준 1: 지역은 areaName의 순서로 정렬<br>"+
                       "신규 지역 생성은 ADMIN 권한만 사용 가능<br>" +
