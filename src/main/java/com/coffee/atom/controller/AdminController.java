@@ -18,7 +18,7 @@ public class AdminController {
 
     @PostMapping(value = "/trees-transaction")
     @Operation(
-        summary = "나무 수령 등록 1️⃣총 관리자 ",
+        summary = "나무 수령 등록 1️⃣ 총 관리자 ",
         description = "<b>나무 수령 정보 생성</b>"
     )
     public void requestApprovalToCreateTreesTransaction(
@@ -35,7 +35,4 @@ public class AdminController {
     ){
         treesTransactionService.createTreesTransaction(approvalTreesTransactionRequestDto);
     }
-
-    //TODO: 1. 부 관리자 목록 조회
-    //TODO: 2. 부 관리자 상세 조회
 }

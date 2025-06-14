@@ -33,4 +33,8 @@ public class ViceAdminDetail {
         this.idCardUrl = idCardUrl;
         return this;
     }
+
+    public void updateArea(Area area) {
+        this.area = area;
+    }
 }

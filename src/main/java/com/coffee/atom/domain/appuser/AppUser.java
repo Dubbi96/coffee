@@ -67,6 +67,10 @@ public class AppUser {
         this.username = userName;
     }
 
+    public void updateUserId(String userId) {
+        this.userId = userId;
+    }
+
     public void approveInstance() {
         this.isApproved = true;
     }
