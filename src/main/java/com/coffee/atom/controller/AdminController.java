@@ -1,14 +1,13 @@
 package com.coffee.atom.controller;
 
-import com.coffee.atom.config.security.LoginAppUser;
-import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.dto.approval.ApprovalTreesTransactionRequestDto;
 import com.coffee.atom.service.TreesTransactionService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/admin")
@@ -25,6 +24,7 @@ public class AdminController {
     public void requestApprovalToCreateTreesTransaction(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "수령할 나무 정보<br>" +
+                            "- <b> id </b>: 0으로 고정" +
                             "- <b>quantity</b>: 수량<br>" +
                             "- <b>receivedDate</b>: 수령 일자<br>" +
                             "- <b>species</b>: 나무 종<br>" +
@@ -35,4 +35,7 @@ public class AdminController {
     ){
         treesTransactionService.createTreesTransaction(approvalTreesTransactionRequestDto);
     }
+
+    //TODO: 1. 부 관리자 목록 조회
+    //TODO: 2. 부 관리자 상세 조회
 }

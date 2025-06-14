@@ -305,19 +305,57 @@ public class ApprovalService {
         String json = approval.getRequestedData();
         Status status = approval.getStatus();
         String rejectedReason = approval.getRejectedReason();
-
+        Method method = approval.getMethod();
+        String requesterName = approval.getRequester().getUsername();
         try {
-            return switch (type) {
-                case FARMER -> fromJson(json, FarmerDetailResponseDto.class, type, status, rejectedReason);
-                case SECTION -> fromJson(json, SectionDetailResponseDto.class, type, status, rejectedReason);
-                case PURCHASE -> fromJson(json, PurchaseDetailResponseDto.class, type, status, rejectedReason);
-                case VILLAGE_HEAD -> fromJson(json, VillageHeadDetailResponseDto.class, type, status, rejectedReason);
-                case TREES_TRANSACTION -> fromJson(json, TreesTransactionDetailResponseDto.class, type, status, rejectedReason);
+            ApprovalDetailResponse dto =  switch (type) {
+                case FARMER -> fromJson(json, FarmerDetailResponseDto.class, type, status, rejectedReason, method, requesterName);
+                case SECTION -> fromJson(json, SectionDetailResponseDto.class, type, status, rejectedReason, method, requesterName);
+                case PURCHASE -> fromJson(json, PurchaseDetailResponseDto.class, type, status, rejectedReason, method, requesterName);
+                case VILLAGE_HEAD -> fromJson(json, VillageHeadDetailResponseDto.class, type, status, rejectedReason, method, requesterName);
+                case TREES_TRANSACTION -> fromJson(json, TreesTransactionDetailResponseDto.class, type, status, rejectedReason, method, requesterName);
             };
+            if (dto instanceof VillageHeadDetailResponseDto v) {
+                enrichVillageHeadDetail(v);
+            }
+            if (dto instanceof FarmerDetailResponseDto v) {
+                enrichFarmerDetail(v);
+            }
+            return dto;
         } catch (JsonProcessingException e) {
             log.error("❌ JSON 파싱 실패! 원본: {}", json);
             throw new CustomException("요청 데이터를 파싱할 수 없습니다.");
         }
+    }
+
+    private void enrichVillageHeadDetail(VillageHeadDetailResponseDto dto) {
+        Long sectionId = dto.getSectionId();
+        if (sectionId == null) return;
+
+        sectionRepository.findById(sectionId).ifPresent(section -> {
+            dto.setSectionName(section.getSectionName());
+
+            if (section.getArea() != null) {
+                dto.setAreaId(section.getArea().getId());
+                dto.setAreaName(section.getArea().getAreaName());
+            }
+        });
+    }
+
+    private void enrichFarmerDetail(FarmerDetailResponseDto dto) {
+        Long villageHeadId = dto.getVillageHeadId();
+        if (villageHeadId == null) return;
+
+        villageHeadDetailRepository.findById(villageHeadId).ifPresent(villageHead -> {
+            Section section = villageHead.getSection();
+            dto.setSectionId(section.getId());
+            dto.setSectionName(section.getSectionName());
+
+            if (section.getArea() != null) {
+                dto.setAreaId(section.getArea().getId());
+                dto.setAreaName(section.getArea().getAreaName());
+            }
+        });
     }
 
     @Transactional
@@ -335,11 +373,13 @@ public class ApprovalService {
         approvalRepository.delete(approval);
     }
 
-    private <T extends ApprovalDetailResponse> T fromJson(String json, Class<T> clazz, ServiceType type, Status status, String rejectedReason) throws JsonProcessingException {
+    private <T extends ApprovalDetailResponse> T fromJson(String json, Class<T> clazz, ServiceType type, Status status, String rejectedReason, Method method, String requesterName) throws JsonProcessingException {
         T dto = new ObjectMapper().readValue(json, clazz);
         dto.setStatus(status);
         dto.setServiceType(type);
         dto.setRejectedReason(rejectedReason);
+        dto.setMethod(method);
+        dto.setRequesterName(requesterName);
         return dto;
     }
 }

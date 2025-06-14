@@ -6,7 +6,6 @@ import com.coffee.atom.domain.Farmer;
 import com.coffee.atom.domain.FarmerRepository;
 import com.coffee.atom.domain.TreesTransaction;
 import com.coffee.atom.domain.TreesTransactionRepository;
-import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.dto.approval.ApprovalTreesTransactionRequestDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
