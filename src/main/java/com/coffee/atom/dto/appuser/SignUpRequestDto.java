@@ -1,13 +1,32 @@
 package com.coffee.atom.dto.appuser;
 
 import com.coffee.atom.domain.appuser.Role;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
-//TODO: RequestDto 수정 (화면 상 내 계정 등록) - 무조건 총 관리자만 사용 가능하며, 면장 부 관리자 생성 용으로 사용 됨. 면장의 경우 지역, 섹션 매핑, 부 관리자의 경우 지역 지역 매핑
+@AllArgsConstructor
 @Data
 public class SignUpRequestDto {
     private String userId;
     private String username;
     private String password;
     private Role role;
+    private Long areaId;
+    private Long sectionId;
+    private String bankName;
+    private String accountInfo;
+
+    @JsonIgnore
+    private MultipartFile idCardFile;
+
+    @JsonIgnore
+    private MultipartFile identificationPhotoFile;
+
+    @JsonIgnore
+    private MultipartFile contractFile;
+
+    @JsonIgnore
+    private MultipartFile bankbookFile;
 }

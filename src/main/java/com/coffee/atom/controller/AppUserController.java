@@ -28,23 +28,40 @@ public class AppUserController {
     }
 
     @PostMapping(value = "/sign-up", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "신규 계정 생성 1️⃣ 총 관리자", description = "<b>총 관리자만 가능</b> <br>부 관리자 / 면장 생성 용도")
-    public Long signUp(@LoginAppUser AppUser appUser,
-                       @RequestPart("userId") String userId,
-                       @RequestPart("username") String username,
-                       @RequestPart("password") String password,
-                       @RequestPart("role") Role role,
-                       @RequestPart(value = "areaId", required = false) Long areaId,
-                       @RequestPart(value = "sectionId", required = false) Long sectionId,
-                       @RequestPart(value = "bankName", required = false) String bankName,
-                       @RequestPart(value = "accountInfo", required = false) String accountInfo,
-                       @RequestPart(value = "idCardFile", required = false) MultipartFile idCardFile,
-                       @RequestPart(value = "identificationPhotoFile", required = false) MultipartFile identificationPhotoFile,
-                       @RequestPart(value = "contractFile", required = false) MultipartFile contractFile,
-                       @RequestPart(value = "bankbookFile", required = false) MultipartFile bankbookFile) {
-        return appUserService.signUp(appUser, userId, username, password, role, areaId, sectionId,
-                bankName, accountInfo, idCardFile, identificationPhotoFile, contractFile, bankbookFile);
+    @Operation(summary = "신규 계정 생성 1️⃣ 총 관리자", description = "<b>총 관리자만 가능</b><br>부 관리자 / 면장 생성 용도")
+    public Long signUp(
+            @RequestPart(value = "idCardFile", required = false) MultipartFile idCardFile,
+            @RequestPart(value = "identificationPhotoFile", required = false) MultipartFile identificationPhotoFile,
+            @RequestPart(value = "contractFile", required = false) MultipartFile contractFile,
+            @RequestPart(value = "bankbookFile", required = false) MultipartFile bankbookFile,
+            @RequestParam("userId") String userId,
+            @RequestParam("username") String username,
+            @RequestParam("password") String password,
+            @RequestParam("role") String roleStr,
+            @RequestParam(value = "areaId", required = false) Long areaId,
+            @RequestParam(value = "sectionId", required = false) Long sectionId,
+            @RequestParam(value = "bankName", required = false) String bankName,
+            @RequestParam(value = "accountInfo", required = false) String accountInfo,
+            @LoginAppUser AppUser appUser
+    ) {
+        Role role = Role.valueOf(roleStr);
+        SignUpRequestDto dto = new SignUpRequestDto(
+                userId,
+                username,
+                password,
+                role,
+                areaId,
+                sectionId,
+                bankName,
+                accountInfo,
+                idCardFile,
+                identificationPhotoFile,
+                contractFile,
+                bankbookFile
+        );
+        return appUserService.signUp(appUser, dto);
     }
+
 
     @PatchMapping(consumes = {"multipart/form-data"})
     @Operation(summary = "내 정보 수정", description = "<b>내 정보 수정</b> <br> 모든 유저 Role 관계 없이 공통으로 사용 가능 <br>**ADMIN, VILLAGE_HEAD 일 경우** : 유저명, password만 입력 idCardUrl은 null <br>**VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER 일 경우** : idCardUrl까지 첨부 가능")
@@ -81,14 +98,17 @@ public class AppUserController {
     }
 
     @PatchMapping(value = "/vice-admin/{viceAdminId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "부 관리자 정보 수정 1️⃣ 총 관리자 ", description = "<b>부 관리자 정보 수정</b> <br>총 관리자만 사용 가능 <br>수정 가능 정보: 이름, 유저아이디, 관리지역, idCard 이미지")
-    public void updateViceAdmin(@PathVariable("viceAdminId") Long viceAdminId,
-                                @LoginAppUser AppUser appUser,
-                                @RequestPart("username") String username,
-                                @RequestPart("userId") String userId,
-                                @RequestPart("areaId") Long areaId,
-                                @RequestPart(value = "idCardFile", required = false) MultipartFile idCardFile) {
-        appUserService.updateViceAdmin(viceAdminId, appUser, username, userId, areaId, idCardFile);
+    @Operation(summary = "부 관리자 정보 수정 1️⃣ 총 관리자", description = "<b>부 관리자 정보 수정</b><br>총 관리자만 사용 가능<br>수정 가능 정보: 이름, 유저아이디, 관리지역, idCard 이미지")
+    public void updateViceAdmin(
+            @PathVariable("viceAdminId") Long viceAdminId,
+            @LoginAppUser AppUser appUser,
+            @RequestParam("username") String username,
+            @RequestParam("userId") String userId,
+            @RequestParam("areaId") Long areaId,
+            @RequestPart(value = "idCardFile", required = false) MultipartFile idCardFile
+    ) {
+        ViceAdminRequestDto dto = new ViceAdminRequestDto(username, userId, areaId, idCardFile);
+        appUserService.updateViceAdmin(viceAdminId, appUser, dto);
     }
 
     //TODO: 3. 내 정보 조회

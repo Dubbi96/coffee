@@ -19,6 +19,7 @@ spring:
     multipart:
       maxFileSize: 100GB
       maxRequestSize: 100GB
+      enabled: true
 
 server:
   tomcat:

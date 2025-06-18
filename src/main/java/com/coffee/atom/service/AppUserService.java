@@ -52,41 +52,30 @@ public class AppUserService {
     @Transactional
     public Long signUp(
             AppUser requester,
-            String userId,
-            String username,
-            String password,
-            Role role,
-            Long areaId,
-            Long sectionId,
-            String bankName,
-            String accountInfo,
-            MultipartFile idCardFile,
-            MultipartFile identificationPhotoFile,
-            MultipartFile contractFile,
-            MultipartFile bankbookFile) {
+            SignUpRequestDto dto) {
 
-        appUserRepository.findByUsername(userId).ifPresent(appUser -> {
+        appUserRepository.findByUsername(dto.getUserId()).ifPresent(appUser -> {
             throw new IllegalArgumentException(ErrorValue.NICKNAME_ALREADY_EXISTS.toString());
         });
 
         String salt = UUID.randomUUID().toString();
-        String encodedPassword = passwordEncoder.encode(password + salt);
+        String encodedPassword = passwordEncoder.encode(dto.getPassword() + salt);
 
         AppUser newUser = AppUser.builder()
-                .userId(userId)
-                .username(username)
+                .userId(dto.getUserId())
+                .username(dto.getUsername())
                 .password(encodedPassword)
                 .salt(salt)
-                .role(role)
+                .role(dto.getRole())
                 .isApproved(Boolean.TRUE)
                 .build();
 
         appUserRepository.save(newUser);
 
-        if (role == Role.VICE_ADMIN_HEAD_OFFICER || role == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
-            Area area = areaRepository.findById(areaId)
+        if (dto.getRole() == Role.VICE_ADMIN_HEAD_OFFICER || dto.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+            Area area = areaRepository.findById(dto.getAreaId())
                     .orElseThrow(() -> new CustomException("존재하지 않는 지역입니다."));
-            String idCardUrl = (idCardFile != null) ? uploadFileIfPresent(idCardFile,"vice-admin/", requester) : null;
+            String idCardUrl = (dto.getIdCardFile() != null) ? uploadFileIfPresent(dto.getIdCardFile(),"vice-admin/", requester) : null;
 
             ViceAdminDetail detail = ViceAdminDetail.builder()
                     .appUser(newUser)
@@ -97,19 +86,19 @@ public class AppUserService {
             viceAdminDetailRepository.save(detail);
         }
 
-        if (role == Role.VILLAGE_HEAD) {
-            Section section = sectionRepository.findById(sectionId)
+        if (dto.getRole() == Role.VILLAGE_HEAD) {
+            Section section = sectionRepository.findById(dto.getSectionId())
                     .orElseThrow(() -> new CustomException("존재하지 않는 섹션입니다."));
 
-            String idUrl = (identificationPhotoFile != null) ? uploadFileIfPresent(identificationPhotoFile, "village-head/", requester) : null;
-            String contractUrl = (contractFile != null) ? uploadFileIfPresent(contractFile, "village-head/", requester) : null;
-            String bankbookUrl = (bankbookFile != null) ? uploadFileIfPresent(bankbookFile, "village-head/", requester) : null;
+            String idUrl = (dto.getIdentificationPhotoFile() != null) ? uploadFileIfPresent(dto.getIdentificationPhotoFile() , "village-head/", requester) : null;
+            String contractUrl = (dto.getContractFile() != null) ? uploadFileIfPresent(dto.getContractFile(), "village-head/", requester) : null;
+            String bankbookUrl = (dto.getBankbookFile() != null) ? uploadFileIfPresent(dto.getBankbookFile(), "village-head/", requester) : null;
 
             VillageHeadDetail detail = VillageHeadDetail.builder()
                     .appUser(newUser)
                     .section(section)
-                    .bankName(bankName)
-                    .accountInfo(accountInfo)
+                    .bankName(dto.getBankName())
+                    .accountInfo(dto.getAccountInfo())
                     .identificationPhotoUrl(idUrl)
                     .contractUrl(contractUrl)
                     .bankbookUrl(bankbookUrl)
@@ -342,10 +331,7 @@ public class AppUserService {
     @Transactional
     public void updateViceAdmin(Long viceAdminId,
                                 AppUser requester,
-                                String username,
-                                String userId,
-                                Long areaId,
-                                MultipartFile idCardFile) {
+                                ViceAdminRequestDto dto) {
         if (!requester.getRole().equals(Role.ADMIN)) {
             throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
         }
@@ -353,26 +339,29 @@ public class AppUserService {
         AppUser targetUser = appUserRepository.findById(viceAdminId)
                 .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
 
-        targetUser.updateUserName(username);
-        targetUser.updateUserId(userId);
+        targetUser.updateUserName(dto.getUsername());
+        targetUser.updateUserId(dto.getUserId());
 
-        Area area = areaRepository.findById(areaId)
+        Area area = areaRepository.findById(dto.getAreaId())
                 .orElseThrow(() -> new CustomException("존재하지 않는 지역입니다."));
 
         ViceAdminDetail detail = viceAdminDetailRepository.findById(viceAdminId)
-                .map(existing -> {
-                    String existingUrl = existing.getIdCardUrl();
-                    String newFileUrl = uploadIdCardToGCS(targetUser, idCardFile, existingUrl);
-                    return existing.updateIdCardUrl(newFileUrl);
-                })
-                .orElseGet(() -> {
-                    String newFileUrl = uploadIdCardToGCS(targetUser, idCardFile, null);
-                    return ViceAdminDetail.builder()
-                            .appUser(targetUser)
-                            .area(area)
-                            .idCardUrl(newFileUrl)
-                            .build();
-                });
+            .map(existing -> {
+                String newFileUrl = dto.getIdCardFile() != null && !dto.getIdCardFile().isEmpty()
+                        ? uploadIdCardToGCS(targetUser, dto.getIdCardFile(), existing.getIdCardUrl())
+                        : existing.getIdCardUrl();
+                return existing.updateIdCardUrl(newFileUrl);
+            })
+            .orElseGet(() -> {
+                String newFileUrl = dto.getIdCardFile() != null && !dto.getIdCardFile().isEmpty()
+                        ? uploadIdCardToGCS(targetUser, dto.getIdCardFile(), null)
+                        : null;
+                return ViceAdminDetail.builder()
+                        .appUser(targetUser)
+                        .area(area)
+                        .idCardUrl(newFileUrl)
+                        .build();
+            });
 
         detail.updateArea(area);
 

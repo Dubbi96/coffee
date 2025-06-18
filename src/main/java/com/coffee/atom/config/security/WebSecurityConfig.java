@@ -85,11 +85,12 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(requests ->
                         requests
                                 .requestMatchers(SWAGGER_URIS).permitAll()
-                                .requestMatchers("/app-user/sign-in", "/app-user/sign-up").permitAll()
-                                .requestMatchers(HttpMethod.DELETE, "app-user/**").hasAuthority("ADMIN")
-                                .requestMatchers(HttpMethod.POST, "approval/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER","VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER")
-                                .requestMatchers(HttpMethod.PUT, "app-user/password").hasAnyAuthority("ADMIN", "USER")
-                                .requestMatchers(HttpMethod.PUT, "app-user/**").hasAuthority("ADMIN")
+                                .requestMatchers("/app-user/sign-in").permitAll()
+                                .requestMatchers("/app-user/sign-up").permitAll()
+                                .requestMatchers(HttpMethod.DELETE, "/app-user/**").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/approval/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER","VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/app-user/password").hasAnyAuthority("ADMIN", "USER")
+                                .requestMatchers(HttpMethod.PUT, "/app-user/**").hasAuthority("ADMIN")
                                 .requestMatchers(HttpMethod.POST, "/project/page/*/section", "/project/element", "/file/applicant/step/**", "/announcement/**", "/faq/**", "/qna/**").hasAuthority("ADMIN")
                                 .requestMatchers("/project/**", "/corporation/**", "/qna/**", "/faq/**", "/file/**").hasAnyAuthority("VIEWER", "ADMIN")
                         .anyRequest().authenticated()
