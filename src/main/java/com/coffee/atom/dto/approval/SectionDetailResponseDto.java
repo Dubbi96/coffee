@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SectionDetailResponseDto implements ApprovalDetailResponse {
     private Long id;
+    private Long requesterId;
     private String requesterName;
     private Long areaId;
     private Double latitude;

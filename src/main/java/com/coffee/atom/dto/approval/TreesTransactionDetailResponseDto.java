@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TreesTransactionDetailResponseDto implements ApprovalDetailResponse {
     private Long id;
+    private Long requesterId;
     private String requesterName;
     private String species;
     private Long farmerId;

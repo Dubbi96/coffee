@@ -317,14 +317,15 @@ public class ApprovalService {
         Status status = approval.getStatus();
         String rejectedReason = approval.getRejectedReason();
         Method method = approval.getMethod();
+        Long requesterId = approval.getRequester().getId();
         String requesterName = approval.getRequester().getUsername();
         try {
             ApprovalDetailResponse dto =  switch (type) {
-                case FARMER -> fromJson(json, FarmerDetailResponseDto.class, type, status, rejectedReason, method, requesterName);
-                case SECTION -> fromJson(json, SectionDetailResponseDto.class, type, status, rejectedReason, method, requesterName);
-                case PURCHASE -> fromJson(json, PurchaseDetailResponseDto.class, type, status, rejectedReason, method, requesterName);
-                case VILLAGE_HEAD -> fromJson(json, VillageHeadDetailResponseDto.class, type, status, rejectedReason, method, requesterName);
-                case TREES_TRANSACTION -> fromJson(json, TreesTransactionDetailResponseDto.class, type, status, rejectedReason, method, requesterName);
+                case FARMER -> fromJson(json, FarmerDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName);
+                case SECTION -> fromJson(json, SectionDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName);
+                case PURCHASE -> fromJson(json, PurchaseDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName);
+                case VILLAGE_HEAD -> fromJson(json, VillageHeadDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName);
+                case TREES_TRANSACTION -> fromJson(json, TreesTransactionDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName);
             };
             if (dto instanceof VillageHeadDetailResponseDto v) {
                 enrichVillageHeadDetail(v);
@@ -409,12 +410,13 @@ public class ApprovalService {
         approvalRepository.delete(approval);
     }
 
-    private <T extends ApprovalDetailResponse> T fromJson(String json, Class<T> clazz, ServiceType type, Status status, String rejectedReason, Method method, String requesterName) throws JsonProcessingException {
+    private <T extends ApprovalDetailResponse> T fromJson(String json, Class<T> clazz, ServiceType type, Status status, String rejectedReason, Method method, Long requesterId,String requesterName) throws JsonProcessingException {
         T dto = new ObjectMapper().readValue(json, clazz);
         dto.setStatus(status);
         dto.setServiceType(type);
         dto.setRejectedReason(rejectedReason);
         dto.setMethod(method);
+        dto.setRequesterId(requesterId);
         dto.setRequesterName(requesterName);
         return dto;
     }

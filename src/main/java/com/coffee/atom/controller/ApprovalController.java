@@ -44,7 +44,6 @@ public class ApprovalController {
                     example = "{\n" +
                             "  \"page\": 0,\n" +
                             "  \"size\": 1,\n" +
-                            "  \"sort\": \"id\"\n" +
                             "}")
             Pageable pageable,
             @LoginAppUser AppUser appUser

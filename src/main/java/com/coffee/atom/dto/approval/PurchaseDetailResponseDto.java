@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PurchaseDetailResponseDto implements ApprovalDetailResponse{
     private Long id;
+    private Long requesterId;
     private String requesterName;
     private Long quantity;
     private Long deduction;

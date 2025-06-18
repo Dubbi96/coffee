@@ -10,5 +10,6 @@ public interface ApprovalDetailResponse {
     void setServiceType(ServiceType serviceType);
     void setRejectedReason(String rejectedReason);
     void setMethod(Method method);
+    void setRequesterId(Long requesterId);
     void setRequesterName(String requesterName);
 }

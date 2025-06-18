@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @Getter
 public class ApprovalResponseDto {
     private Long id;
+    private Long requesterId;
     private String requesterName;
     private String approverName;
     private Status status;
@@ -23,6 +24,7 @@ public class ApprovalResponseDto {
     public static ApprovalResponseDto from(Approval approval) {
         return ApprovalResponseDto.builder()
                 .id(approval.getId())
+                .requesterId(approval.getRequester().getId())
                 .requesterName(approval.getRequester().getUsername())
                 .approverName(approval.getApprover().getUsername())
                 .status(approval.getStatus())
