@@ -174,6 +174,7 @@ public class AppUserService {
         return VillageHeadDetailResponseDto.builder()
                 .userId(appUser.getUserId())
                 .username(appUser.getUsername())
+                .bankName(villageHeadDetail.getBankName())
                 .accountInfo(villageHeadDetail.getAccountInfo())
                 .identificationPhotoUrl(villageHeadDetail.getIdentificationPhotoUrl())
                 .contractFileUrl(villageHeadDetail.getContractUrl())

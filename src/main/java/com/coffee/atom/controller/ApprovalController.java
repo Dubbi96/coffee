@@ -91,7 +91,7 @@ public class ApprovalController {
 
     @PostMapping(value = "/village-head", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-        summary = "면장 생성 승인 요청 2️⃣ 부 관리자",
+        summary = "면장 생성 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
         description = "<b>면장 계정 생성을 위한 승인 요청</b><br>" +
                       "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
                       "파일은 Multipart 형식으로 전송되며, 일부 항목은 생략 가능"
@@ -130,7 +130,7 @@ public class ApprovalController {
 
     @PostMapping(value = "/farmer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-        summary = "농부 생성 승인 요청 2️⃣ 부 관리자 ",
+        summary = "농부 생성 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자 ",
         description = "<b>농부 계정 생성을 위한 승인 요청 생성</b><br>" +
                       "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
                       "파일은 Multipart 형식으로 전송되며, 신분증 이미지는 선택 사항"
@@ -157,7 +157,7 @@ public class ApprovalController {
 
     @PostMapping(value = "/trees-transaction")
     @Operation(
-        summary = "나무 수령 승인 요청 2️⃣ 부 관리자 ",
+        summary = "나무 수령 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자 ",
         description = "<b>나무 수령 정보를 위한 승인 요청 생성</b><br>" +
                       "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>"
     )
@@ -184,7 +184,7 @@ public class ApprovalController {
 
     @PostMapping(value = "/purchase")
     @Operation(
-        summary = "수매 승인 요청 2️⃣ 부 관리자 (한국지사) ",
+        summary = "수매 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자 (한국지사) ",
         description = "<b>수매 정보를 위한 승인 요청 생성</b><br>" +
                       "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>"
     )
@@ -214,7 +214,7 @@ public class ApprovalController {
 
     @PostMapping(value = "/section")
     @Operation(
-        summary = "섹션 생성 승인 요청 2️⃣ 부 관리자 ",
+        summary = "섹션 생성 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자 ",
         description = "<b>섹션 생성 승인 요청 생성</b><br>" +
                       "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>"
     )
@@ -242,7 +242,7 @@ public class ApprovalController {
 
     @PatchMapping(value = "/village-head", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-        summary = "면장 수정 승인 요청 2️⃣ 부 관리자",
+        summary = "면장 수정 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
         description = "<b>면장 계정 수정을 위한 승인 요청</b><br>" +
                       "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
                       "파일은 Multipart 형식으로 전송되며, 일부 항목은 생략 가능"
@@ -283,7 +283,7 @@ public class ApprovalController {
 
     @DeleteMapping(value = "/{approvalId}")
     @Operation(
-        summary = "요청 삭제 2️⃣ 부 관리자",
+        summary = "요청 삭제 1️⃣ 총 관리자 2️⃣ 부 관리자",
         description = "<b>요청 삭제</b><br>" +
                       "본인이 요청한 경우에만 삭제 가능<br>" +
                       "타인이 요청한 경우 UNAUTHORIZED_SERVICE 에러 발생"

@@ -5,6 +5,7 @@ import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.domain.*;
 import com.coffee.atom.domain.approval.*;
 import com.coffee.atom.domain.appuser.*;
+import com.coffee.atom.domain.area.Area;
 import com.coffee.atom.domain.area.Section;
 import com.coffee.atom.domain.area.SectionRepository;
 import com.coffee.atom.dto.approval.*;
@@ -14,7 +15,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -107,6 +110,14 @@ public class ApprovalService {
         }
         if (serviceTypes != null && !serviceTypes.isEmpty()) {
             spec = spec.and((root, query, cb) -> root.get("serviceType").in(serviceTypes));
+        }
+
+        if (!pageable.getSort().isSorted()) {
+            pageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+            );
         }
 
         return approvalRepository.findAll(spec, pageable)
@@ -321,11 +332,36 @@ public class ApprovalService {
             if (dto instanceof FarmerDetailResponseDto v) {
                 enrichFarmerDetail(v);
             }
+            if (dto instanceof TreesTransactionDetailResponseDto v) {
+                enrichTreeTransactionDetail(v);
+            }
             return dto;
         } catch (JsonProcessingException e) {
             log.error("❌ JSON 파싱 실패! 원본: {}", json);
             throw new CustomException("요청 데이터를 파싱할 수 없습니다.");
         }
+    }
+
+    private void enrichTreeTransactionDetail(TreesTransactionDetailResponseDto dto) {
+        Long farmerId = dto.getFarmerId();
+        if (farmerId == null) return;
+
+        farmerRepository.findById(farmerId).ifPresent(farmer -> {
+            dto.setFarmerName(farmer.getName());
+
+            VillageHeadDetail villageHead = farmer.getVillageHead();
+            if (villageHead != null) {
+                Section section = villageHead.getSection();
+                if (section != null) {
+                    dto.setSectionName(section.getSectionName());
+
+                    Area area = section.getArea();
+                    if (area != null) {
+                        dto.setAreaName(area.getAreaName());
+                    }
+                }
+            }
+        });
     }
 
     private void enrichVillageHeadDetail(VillageHeadDetailResponseDto dto) {
