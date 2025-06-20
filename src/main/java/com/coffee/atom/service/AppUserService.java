@@ -13,6 +13,8 @@ import com.coffee.atom.domain.area.SectionRepository;
 import com.coffee.atom.dto.approval.ApprovalFarmerRequestDto;
 import com.coffee.atom.dto.approval.ApprovalVillageHeadRequestDto;
 import com.coffee.atom.dto.appuser.*;
+import com.coffee.atom.dto.area.AreaDto;
+import com.coffee.atom.dto.area.SectionDto;
 import com.coffee.atom.util.GCSUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -368,6 +370,68 @@ public class AppUserService {
 
         appUserRepository.save(targetUser);
         viceAdminDetailRepository.save(detail);
+    }
+
+    @Transactional(readOnly = true)
+    public Object getMyInfo(AppUser appUser) {
+        AppUserInfoDto userDto = AppUserInfoDto.builder()
+                .id(appUser.getId())
+                .userId(appUser.getUserId())
+                .username(appUser.getUsername())
+                .role(appUser.getRole())
+                .build();
+
+        return switch (appUser.getRole()) {
+            case ADMIN -> AdminMyInfoDto.builder()
+                    .appUser(userDto)
+                    .build();
+
+            case VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER -> {
+                ViceAdminDetail detail = viceAdminDetailRepository.findById(appUser.getId())
+                        .orElseThrow(() -> new CustomException("부관리자 정보가 없습니다."));
+                yield ViceAdminMyInfoDto.builder()
+                        .appUser(userDto)
+                        .idCardUrl(detail.getIdCardUrl())
+                        .area(toAreaDto(detail.getArea()))
+                        .build();
+            }
+
+            case VILLAGE_HEAD -> {
+                VillageHeadDetail detail = villageHeadDetailRepository
+                        .findVillageHeadDetailByIsApprovedAndId(Boolean.TRUE, appUser.getId())
+                        .orElseThrow(() -> new CustomException("승인된 면장 정보가 없습니다."));
+                Section section = detail.getSection();
+                Area area = section.getArea();
+                yield VillageHeadMyInfoDto.builder()
+                        .appUser(userDto)
+                        .identificationPhotoUrl(detail.getIdentificationPhotoUrl())
+                        .bankName(detail.getBankName())
+                        .accountInfo(detail.getAccountInfo())
+                        .contractUrl(detail.getContractUrl())
+                        .bankbookUrl(detail.getBankbookUrl())
+                        .section(toSectionDto(section))
+                        .area(toAreaDto(area))
+                        .build();
+            }
+        };
+    }
+
+    private AreaDto toAreaDto(Area area) {
+        return AreaDto.builder()
+                .id(area.getId())
+                .areaName(area.getAreaName())
+                .longitude(area.getLongitude())
+                .latitude(area.getLatitude())
+                .build();
+    }
+
+    private SectionDto toSectionDto(Section section) {
+        return SectionDto.builder()
+                .id(section.getId())
+                .sectionName(section.getSectionName())
+                .longitude(section.getLongitude())
+                .latitude(section.getLatitude())
+                .build();
     }
 
     /**

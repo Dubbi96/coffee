@@ -111,5 +111,9 @@ public class AppUserController {
         appUserService.updateViceAdmin(viceAdminId, appUser, dto);
     }
 
-    //TODO: 3. 내 정보 조회
+    @GetMapping("/my")
+    @Operation(summary = "내 정보 조회", description = "<b>로그인한 유저의 정보를 Role에 따라 조회</b><br>AppUser 정보는 공통으로 포함됨")
+    public Object getMyInfo(@LoginAppUser AppUser appUser) {
+        return appUserService.getMyInfo(appUser);
+    }
 }
