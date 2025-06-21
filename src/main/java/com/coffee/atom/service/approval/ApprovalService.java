@@ -227,6 +227,35 @@ public class ApprovalService {
                     villageHeadDetailRepository.save(villageHead);
                 }
 
+                if (type == EntityType.FARMER) {
+                    Farmer farmer = farmerRepository.findById(id)
+                            .orElseThrow(() -> new CustomException("해당 Farmer가 존재하지 않습니다."));
+
+                    // 이름 업데이트
+                    if (jsonNode.has("name")) {
+                        farmer.updateName(jsonNode.get("name").asText());
+                    }
+
+                    // 식별 이미지 URL 업데이트 (Optional)
+                    if (jsonNode.has("identificationPhotoUrl")) {
+                        farmer.updateIdentificationPhotoUrl(jsonNode.get("identificationPhotoUrl").asText());
+                    }
+
+                    // 소속 면장 변경
+                    if (jsonNode.has("villageHeadId")) {
+                        Long villageHeadId = jsonNode.get("villageHeadId").asLong();
+                        VillageHeadDetail villageHeadDetail = villageHeadDetailRepository.findById(villageHeadId)
+                                .orElseThrow(() -> new CustomException("면장이 존재하지 않습니다."));
+                        if (!villageHeadDetail.getIsApproved()) {
+                            throw new CustomException("승인되지 않은 면장입니다.");
+                        }
+                        farmer.updateVillageHead(villageHeadDetail);
+                    }
+
+                    farmerRepository.save(farmer);
+                }
+
+
                 // (추후 FARMER 등 다른 EntityType도 추가 가능)
 
             } catch (JsonProcessingException e) {

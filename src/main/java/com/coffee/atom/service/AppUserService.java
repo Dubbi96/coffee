@@ -434,6 +434,24 @@ public class AppUserService {
                 .build();
     }
 
+    @Transactional
+    public ApprovalFarmerRequestDto requestApprovalToUpdateFarmer(AppUser appUser, ApprovalFarmerRequestDto dto) {
+        Farmer farmer = farmerRepository.findById(dto.getId())
+                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+
+        VillageHeadDetail villageHeadDetail = villageHeadDetailRepository.findById(dto.getVillageHeadId())
+                .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
+        if (!villageHeadDetail.getIsApproved())
+            throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage());
+
+        String directory = "farmer/";
+        String identificationUrl = uploadFileIfPresent(dto.getIdentificationPhoto(), directory, appUser);
+
+        // 기존 농부 데이터를 기반으로 수정 DTO 구성
+        dto.setIdentificationPhotoUrl(identificationUrl != null ? identificationUrl : farmer.getIdentificationPhotoUrl());
+        return dto;
+    }
+
     /**
      * GCS에 ID 카드 업로드 후 URL 반환
      */

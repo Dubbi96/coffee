@@ -32,4 +32,16 @@ public class Farmer {
     public void approveInstance() {
         this.isApproved = true;
     }
+
+    public void updateName(String name){
+        this.name = name;
+    }
+
+    public void updateIdentificationPhotoUrl(String identificationPhotoUrl){
+        this.identificationPhotoUrl = identificationPhotoUrl;
+    }
+
+    public void updateVillageHead(VillageHeadDetail villageHeadDetail){
+        this.villageHead = villageHeadDetail;
+    }
 }

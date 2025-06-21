@@ -145,4 +145,21 @@ public class ApprovalFacadeService {
         );
     }
 
+    @Transactional
+    public void processFarmerUpdate(
+            AppUser requester,
+            Long approverId,
+            ApprovalFarmerRequestDto dto
+    ) throws JsonProcessingException {
+        dto = appUserService.requestApprovalToUpdateFarmer(requester, dto); // 수정용 DTO 처리
+        approvalService.requestApproval(
+                requester,
+                approverId,
+                dto,
+                Method.UPDATE, // 생성과의 차이점
+                ServiceType.FARMER,
+                List.of(new EntityReference(EntityType.FARMER, dto.getId()))
+        );
+    }
+
 }

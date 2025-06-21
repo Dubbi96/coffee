@@ -43,7 +43,7 @@ public class ApprovalController {
             @Parameter(description = "페이지네이션과 정렬 정보",
                     example = "{\n" +
                             "  \"page\": 0,\n" +
-                            "  \"size\": 1,\n" +
+                            "  \"size\": 1\n" +
                             "}")
             Pageable pageable,
             @LoginAppUser AppUser appUser
@@ -289,5 +289,36 @@ public class ApprovalController {
     )
     public void deleteApproval(@PathVariable("approvalId") Long approvalId, @LoginAppUser AppUser appUser){
         approvalService.deleteApproval(approvalId, appUser);
+    }
+
+    @PatchMapping(value = "/farmer/{farmerId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+        summary = "농부 수정 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자 ",
+        description = "<b>기존 농부 정보 수정을 위한 승인 요청</b><br>" +
+                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
+                      "수정 대상 farmerId는 필수<br>" +
+                      "파일은 Multipart 형식으로 전송되며, 신분증 이미지는 선택 사항"
+    )
+    public void requestApprovalToUpdateFarmer(
+            @Parameter(description = "농부 신원 확인 용 이미지")
+            @RequestPart(value = "identificationPhoto", required = false) MultipartFile identificationPhoto,
+            @Parameter(description = "농부 이름")
+            @RequestParam("name") String name,
+            @Parameter(description = "농부가 소속된 면장 ID")
+            @RequestParam("villageHeadId") Long villageHeadId,
+            @PathVariable("farmerId") Long farmerId,
+            @Parameter(description = "승인자 ADMIN ID")
+            @RequestParam("approverId") Long approverId,
+            @LoginAppUser AppUser appUser
+    ) {
+        ApprovalFarmerRequestDto dto =
+                new ApprovalFarmerRequestDto(identificationPhoto, name, villageHeadId);
+        dto.setId(farmerId); // 기존 농부 ID 설정
+
+        try {
+            approvalFacadeService.processFarmerUpdate(appUser, approverId, dto);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+        }
     }
 }
