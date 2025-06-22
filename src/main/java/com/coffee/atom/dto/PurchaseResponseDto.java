@@ -9,7 +9,9 @@ import java.time.LocalDate;
 @Getter
 @Builder
 public class PurchaseResponseDto {
+    private Long id;
     private Long managerId;
+    private String managerName;
     private LocalDate purchaseDate;
     private Long quantity;
     private Long unitPrice;
@@ -19,7 +21,9 @@ public class PurchaseResponseDto {
 
     public static PurchaseResponseDto from(Purchase purchase) {
         return PurchaseResponseDto.builder()
+                .id(purchase.getId())
                 .managerId(purchase.getManager().getId())
+                .managerName(purchase.getManager().getUsername())
                 .purchaseDate(purchase.getPurchaseDate())
                 .quantity(purchase.getQuantity())
                 .unitPrice(purchase.getUnitPrice())
