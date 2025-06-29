@@ -2,9 +2,7 @@ package com.coffee.atom.service;
 
 import com.coffee.atom.config.error.CustomException;
 import com.coffee.atom.config.error.ErrorValue;
-import com.coffee.atom.domain.appuser.AppUser;
-import com.coffee.atom.domain.appuser.AppUserRepository;
-import com.coffee.atom.domain.appuser.Role;
+import com.coffee.atom.domain.appuser.*;
 import com.coffee.atom.domain.area.Area;
 import com.coffee.atom.domain.area.AreaRepository;
 import com.coffee.atom.domain.area.Section;
@@ -17,11 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @RequiredArgsConstructor
 public class AreaService {
     private final AreaRepository areaRepository;
+    private final ViceAdminDetailRepository viceAdminDetailRepository;
 
     @Transactional
     public void saveArea(AppUser appUser, AreaRequestDto areaRequestDto) {
@@ -83,5 +83,22 @@ public class AreaService {
                         .latitude(area.getLatitude())
                         .longitude(area.getLongitude()).build())
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public AreaResponseDto getMyAreaForViceAdmin(AppUser appUser) {
+        Role role = appUser.getRole();
+
+        if (!role.equals(Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) &&
+            !role.equals(Role.VICE_ADMIN_HEAD_OFFICER)) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED_SERVICE.getMessage());
+        }
+
+        ViceAdminDetail detail = viceAdminDetailRepository.findById(appUser.getId())
+                .orElseThrow(() -> new CustomException("부 관리자 상세정보를 찾을 수 없습니다."));
+
+        Area area = detail.getArea();
+
+        return AreaResponseDto.from(area);
     }
 }
