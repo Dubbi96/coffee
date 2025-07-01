@@ -48,7 +48,14 @@ public class SectionService {
                 .latitude(sectionRequestDto.getLatitude())
                 .longitude(sectionRequestDto.getLongitude())
                 .area(area)
+                .isApproved(true)
                 .build();
         sectionRepository.save(section);
+    }
+
+    @Transactional
+    public void deleteSection(Long sectionId) {
+        sectionRepository.findById(sectionId).orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND.getMessage()));
+        sectionRepository.deleteById(sectionId);
     }
 }
