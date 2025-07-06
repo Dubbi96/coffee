@@ -321,4 +321,100 @@ public class ApprovalController {
             throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
         }
     }
+
+    @DeleteMapping("/farmer/{farmerId}")
+    @Operation(
+        summary = "농부 삭제 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
+        description = "<b>기존 농부 정보 삭제를 위한 승인 요청</b><br>" +
+                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
+                      "삭제 대상 farmerId는 필수"
+    )
+    public void requestApprovalToDeleteFarmer(
+            @PathVariable("farmerId") Long farmerId,
+            @RequestParam("approverId") Long approverId,
+            @LoginAppUser AppUser appUser
+    ) {
+        try {
+            approvalFacadeService.processFarmerDelete(appUser, approverId, farmerId);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+        }
+    }
+
+    @DeleteMapping("/village-head/{villageHeadId}")
+    @Operation(
+        summary = "면장 삭제 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
+        description = "<b>기존 면장 정보 삭제를 위한 승인 요청</b><br>" +
+                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
+                      "삭제 대상 villageHeadId는 필수"
+    )
+    public void requestApprovalToDeleteVillageHead(
+            @PathVariable("villageHeadId") Long villageHeadId,
+            @RequestParam("approverId") Long approverId,
+            @LoginAppUser AppUser appUser
+    ) {
+        try {
+            approvalFacadeService.processVillageHeadDelete(appUser, approverId, villageHeadId);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+        }
+    }
+
+    @DeleteMapping("/section/{sectionId}")
+    @Operation(
+        summary = "섹션 삭제 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
+        description = "<b>기존 섹션 정보 삭제를 위한 승인 요청</b><br>" +
+                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
+                      "삭제 대상 sectionId는 필수"
+    )
+    public void requestApprovalToDeleteSection(
+            @PathVariable("sectionId") Long sectionId,
+            @RequestParam("approverId") Long approverId,
+            @LoginAppUser AppUser appUser
+    ) {
+        try {
+            approvalFacadeService.processSectionDelete(appUser, approverId, sectionId);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+        }
+    }
+
+    @DeleteMapping("/trees-transaction/{transactionId}")
+    @Operation(
+        summary = "나무 수령 삭제 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
+        description = "<b>기존 나무 수령 이력 삭제를 위한 승인 요청</b><br>" +
+                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
+                      "삭제 대상 transactionId는 필수"
+    )
+    public void requestApprovalToDeleteTreesTransaction(
+            @PathVariable("transactionId") Long transactionId,
+            @RequestParam("approverId") Long approverId,
+            @LoginAppUser AppUser appUser
+    ) {
+        try {
+            approvalFacadeService.processTreesTransactionDelete(appUser, approverId, transactionId);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+        }
+    }
+
+    @DeleteMapping("/purchase/{purchaseId}")
+    @Operation(
+        summary = "구매 이력 삭제 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
+        description = "<b>기존 구매 이력 삭제를 위한 승인 요청</b><br>" +
+                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
+                      "삭제 대상 purchaseId는 필수"
+    )
+    public void requestApprovalToDeletePurchase(
+            @PathVariable("purchaseId") Long purchaseId,
+            @RequestParam("approverId") Long approverId,
+            @LoginAppUser AppUser appUser
+    ) {
+        try {
+            approvalFacadeService.processPurchaseDelete(appUser, approverId, purchaseId);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+        }
+    }
+
 }

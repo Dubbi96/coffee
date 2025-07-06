@@ -271,12 +271,30 @@ public class ApprovalService {
             Long id = instance.getInstanceId();
 
             switch (type) {
-                case VILLAGE_HEAD_DETAIL -> villageHeadDetailRepository.deleteById(id);
-                case FARMER -> farmerRepository.deleteById(id);
-                case SECTION -> sectionRepository.deleteById(id);
-                case TREES_TRANSACTION -> treesTransactionRepository.deleteById(id);
-                case APP_USER -> appUserRepository.deleteById(id);
-                case PURCHASE -> purchaseRepository.deleteById(id);
+                case VILLAGE_HEAD_DETAIL -> {
+                    villageHeadDetailRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                    villageHeadDetailRepository.deleteById(id);
+                }
+                case FARMER ->{
+                    farmerRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                    farmerRepository.deleteById(id);
+                }
+                case SECTION ->{
+                    sectionRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                    sectionRepository.deleteById(id);
+                }
+                case TREES_TRANSACTION ->{
+                    treesTransactionRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                    treesTransactionRepository.deleteById(id);
+                }
+                case APP_USER ->{
+                    appUserRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                    appUserRepository.deleteById(id);
+                }
+                case PURCHASE -> {
+                    purchaseRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                    purchaseRepository.deleteById(id);
+                }
                 default -> throw new UnsupportedOperationException("삭제 불가 엔티티입니다: " + type);
             }
         }
