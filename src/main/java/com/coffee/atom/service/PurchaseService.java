@@ -21,7 +21,7 @@ public class PurchaseService {
 
     @Transactional
     public ApprovalPurchaseRequestDto requestApprovalToCreatePurchase(AppUser requester, ApprovalPurchaseRequestDto approvalPurchaseRequestDto) {
-        if(!(requester.getRole() == Role.VICE_ADMIN_HEAD_OFFICER && requester.getRole() == Role.ADMIN)) throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
+        if(requester.getRole() != Role.VICE_ADMIN_HEAD_OFFICER || requester.getRole() != Role.ADMIN) throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
         Purchase purchase = Purchase.builder()
                 .manager(requester)
                 .purchaseDate(approvalPurchaseRequestDto.getPurchaseDate())
