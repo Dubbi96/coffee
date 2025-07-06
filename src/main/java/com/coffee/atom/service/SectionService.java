@@ -11,6 +11,7 @@ import com.coffee.atom.domain.area.AreaRepository;
 import com.coffee.atom.domain.area.Section;
 import com.coffee.atom.domain.area.SectionRepository;
 import com.coffee.atom.dto.approval.ApprovalSectionRequestDto;
+import com.coffee.atom.dto.area.SectionDto;
 import com.coffee.atom.dto.section.SectionRequestDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -58,4 +59,18 @@ public class SectionService {
         sectionRepository.findById(sectionId).orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND.getMessage()));
         sectionRepository.deleteById(sectionId);
     }
+
+    @Transactional(readOnly = true)
+    public SectionDto getSectionById(Long sectionId) {
+        Section section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+
+        return SectionDto.builder()
+                .id(section.getId())
+                .sectionName(section.getSectionName())
+                .latitude(section.getLatitude())
+                .longitude(section.getLongitude())
+                .build();
+    }
+
 }

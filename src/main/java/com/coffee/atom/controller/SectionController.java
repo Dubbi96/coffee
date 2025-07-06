@@ -1,5 +1,7 @@
 package com.coffee.atom.controller;
 
+import com.coffee.atom.common.ApiResponse;
+import com.coffee.atom.dto.area.SectionDto;
 import com.coffee.atom.dto.section.SectionRequestDto;
 import com.coffee.atom.service.SectionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,4 +39,18 @@ public class SectionController {
     ) {
         sectionService.deleteSection(sectionId);
     }
+
+    @GetMapping("/{sectionId}")
+    @Operation(
+        summary = "섹션 단건 조회",
+        description = "<b>지정한 섹션 ID에 해당하는 섹션 정보를 조회</b><br>" +
+                      "섹션명, 경도(longitude), 위도(latitude)를 포함한 정보를 반환합니다.<br>" +
+                      "해당 ID가 존재하지 않을 경우 예외가 발생합니다."
+    )
+    public SectionDto getSectionById(
+            @PathVariable("sectionId") Long sectionId
+    ) {
+        return sectionService.getSectionById(sectionId);
+    }
+
 }

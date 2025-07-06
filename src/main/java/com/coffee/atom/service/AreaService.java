@@ -6,6 +6,7 @@ import com.coffee.atom.domain.appuser.*;
 import com.coffee.atom.domain.area.Area;
 import com.coffee.atom.domain.area.AreaRepository;
 import com.coffee.atom.domain.area.Section;
+import com.coffee.atom.dto.area.AreaDto;
 import com.coffee.atom.dto.area.AreaRequestDto;
 import com.coffee.atom.dto.area.AreaResponseDto;
 import com.coffee.atom.dto.area.AreaSectionResponseDto;
@@ -100,5 +101,30 @@ public class AreaService {
         Area area = detail.getArea();
 
         return AreaResponseDto.from(area);
+    }
+
+    @Transactional(readOnly = true)
+    public AreaDto getAreaById(Long areaId) {
+        Area area = areaRepository.findById(areaId)
+                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+
+        return AreaDto.builder()
+                .id(area.getId())
+                .areaName(area.getAreaName())
+                .latitude(area.getLatitude())
+                .longitude(area.getLongitude())
+                .build();
+    }
+
+    @Transactional
+    public void deleteAreaById(AppUser requester, Long areaId) {
+        if (!requester.getRole().equals(Role.ADMIN)) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
+        }
+
+        Area area = areaRepository.findById(areaId)
+                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+
+        areaRepository.delete(area);
     }
 }

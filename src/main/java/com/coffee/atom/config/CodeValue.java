@@ -22,6 +22,7 @@ public enum CodeValue {
     NO_USER_FROM_EMAIL("U003"), // 이메일에 해당하는 유저를 찾을 수 없는 경우
     NO_PAGE("P001"), // 페이지가 존재하지 않는 경우
     INTERNAL_ERROR("E001"),
+    DATA_INTEGRITY_VIOLATION("E005"),
     ALREADY_ADDITIONAL_DOC_SUBMITTED("AD001");
     private final String value;
 

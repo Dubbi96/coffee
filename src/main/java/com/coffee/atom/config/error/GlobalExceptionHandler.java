@@ -5,6 +5,7 @@ import static com.coffee.atom.common.ApiResponse.makeErrorResponse;
 import com.coffee.atom.common.ApiResponse;
 import com.coffee.atom.config.CodeValue;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.authentication.session.SessionAuthenticationException;
@@ -43,4 +44,10 @@ public class GlobalExceptionHandler {
         return makeErrorResponse(e.getMessage(), CodeValue.INTERNAL_ERROR.getValue(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        log.warn("무결성 제약 위반 발생: {}", e.getMessage(), e);
+        String message = "삭제할 수 없습니다. 해당 항목이 다른 데이터에서 참조되고 있습니다.";
+        return makeErrorResponse(message, CodeValue.DATA_INTEGRITY_VIOLATION.getValue(), HttpStatus.BAD_REQUEST);
+    }
 }

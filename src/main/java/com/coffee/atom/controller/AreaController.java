@@ -1,5 +1,6 @@
 package com.coffee.atom.controller;
 
+import com.coffee.atom.common.ApiResponse;
 import com.coffee.atom.config.security.LoginAppUser;
 import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.dto.area.AreaDto;
@@ -82,4 +83,31 @@ public class AreaController {
     ) {
         return areaService.getMyAreaForViceAdmin(appUser);
     }
+
+    @GetMapping("/{areaId}")
+    @Operation(
+        summary = "지역 단건 조회",
+        description = "<b>지역 ID를 기준으로 해당 지역 정보를 조회</b><br>" +
+                      "경도, 위도, 지역명 등을 포함한 정보를 반환"
+    )
+    public AreaDto getAreaById(
+            @PathVariable("areaId") Long areaId
+    ) {
+        return areaService.getAreaById(areaId);
+    }
+
+    @DeleteMapping("/{areaId}")
+    @Operation(
+        summary = "지역 삭제 1️⃣ 총 관리자 ",
+        description = "<b>지정한 지역 ID에 해당하는 지역(Area)을 즉시 삭제</b><br>" +
+                      "ADMIN 권한을 가진 사용자만 요청할 수 있으며,<br>" +
+                      "타 권한 사용자가 요청할 경우 UNAUTHORIZED 예외가 발생합니다."
+    )
+    public void deleteArea(
+            @PathVariable("areaId") Long areaId,
+            @LoginAppUser AppUser appUser
+    ) {
+        areaService.deleteAreaById(appUser, areaId);
+    }
+
 }
