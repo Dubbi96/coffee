@@ -23,10 +23,10 @@ public class GlobalExceptionHandler {
         return makeErrorResponse(e.getMessage(), CodeValue.BAD_REQUEST.getValue());
     }
 
-    @ExceptionHandler(SessionAuthenticationException.class)
+    /*@ExceptionHandler(SessionAuthenticationException.class)
     public ResponseEntity<ApiResponse> handleAuthenticationException(SessionAuthenticationException e) {
         return makeErrorResponse(ErrorValue.UNAUTHORIZED.toString(), CodeValue.NO_TOKEN_IN_REQUEST.getValue(), HttpStatus.UNAUTHORIZED);
-    }
+    }*/
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ApiResponse> handleCustomException(CustomException e) {
