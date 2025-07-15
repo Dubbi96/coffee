@@ -17,7 +17,7 @@ public class Farmer {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "village_head_id", nullable = false)
+    @JoinColumn(name = "village_head_id")
     private VillageHeadDetail villageHead;
 
     @Column(name = "name", nullable = false)

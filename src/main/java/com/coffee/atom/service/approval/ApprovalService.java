@@ -22,6 +22,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
@@ -316,8 +317,28 @@ public class ApprovalService {
         approvalRepository.save(approval);
     }
 
-        private void rejectCreateApproval(Approval approval) {
-        for (RequestedInstance instance : approval.getRequestedInstance()) {
+    private int deletePriority(EntityType type) {
+        return switch (type) {
+            case FARMER -> 1;
+            case VILLAGE_HEAD_DETAIL -> 2;
+            case SECTION -> 3;
+            case PURCHASE -> 4;
+            case TREES_TRANSACTION -> 5;
+            case APP_USER -> 6;
+            default -> 99;
+        };
+    }
+
+
+
+    private void rejectCreateApproval(Approval approval) {
+    // 1. 삭제 우선순위로 정렬
+        List<RequestedInstance> sortedInstances = approval.getRequestedInstance().stream()
+            .sorted(Comparator.comparingInt(instance -> deletePriority(instance.getEntityType())))
+            .toList();
+
+        // 2. 정렬된 순서대로 삭제
+        for (RequestedInstance instance : sortedInstances) {
             EntityType type = instance.getEntityType();
             Long id = instance.getInstanceId();
 
