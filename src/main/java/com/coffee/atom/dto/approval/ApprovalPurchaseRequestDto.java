@@ -13,4 +13,5 @@ public class ApprovalPurchaseRequestDto {
     private Long quantity;
     private Long totalPrice;
     private Long unitPrice;
+    private String remarks;
 }

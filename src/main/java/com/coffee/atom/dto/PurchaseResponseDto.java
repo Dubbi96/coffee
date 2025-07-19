@@ -18,6 +18,7 @@ public class PurchaseResponseDto {
     private Long totalPrice;
     private Long deduction;
     private Long paymentAmount;
+    private String remarks;
 
     public static PurchaseResponseDto from(Purchase purchase) {
         return PurchaseResponseDto.builder()
@@ -30,6 +31,7 @@ public class PurchaseResponseDto {
                 .totalPrice(purchase.getTotalPrice())
                 .deduction(purchase.getDeduction())
                 .paymentAmount(purchase.getPaymentAmount())
+                .remarks(purchase.getRemarks())
                 .build();
     }
 }

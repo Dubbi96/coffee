@@ -22,6 +22,7 @@ public class PurchaseDetailResponseDto implements ApprovalDetailResponse{
     private Long totalPrice;
     private String purchaseDate;
     private Long paymentAmount;
+    private String remarks;
     private Status status;
     private ServiceType serviceType;
     private String rejectedReason;

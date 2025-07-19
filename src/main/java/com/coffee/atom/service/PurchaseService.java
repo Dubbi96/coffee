@@ -30,6 +30,7 @@ public class PurchaseService {
                 .totalPrice(approvalPurchaseRequestDto.getTotalPrice())
                 .deduction(approvalPurchaseRequestDto.getDeduction())
                 .paymentAmount(approvalPurchaseRequestDto.getPaymentAmount())
+                .remarks(approvalPurchaseRequestDto.getRemarks())
                 .build();
         purchaseRepository.save(purchase);
         approvalPurchaseRequestDto.setId(purchase.getId());
