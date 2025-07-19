@@ -26,4 +26,6 @@ public interface ViceAdminDetailRepository extends JpaRepository<ViceAdminDetail
 
     @Query("SELECT v FROM ViceAdminDetail v JOIN FETCH v.appUser a JOIN FETCH v.area WHERE v.id = :id")
     Optional<ViceAdminDetail> findByIdWithAppUserAndArea(@Param("id") Long id);
+
+    List<ViceAdminDetail> findByAreaAndAppUser_Role(Area area, Role role);
 }

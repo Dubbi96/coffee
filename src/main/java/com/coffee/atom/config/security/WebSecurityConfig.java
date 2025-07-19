@@ -92,6 +92,7 @@ public class WebSecurityConfig {
                                 .requestMatchers(HttpMethod.PUT, "/app-user/password").hasAnyAuthority("ADMIN", "USER")
                                 .requestMatchers(HttpMethod.PUT, "/app-user/**").hasAuthority("ADMIN")
                                 .requestMatchers(HttpMethod.POST, "/project/page/*/section", "/project/element", "/file/applicant/step/**", "/announcement/**", "/faq/**", "/qna/**").hasAuthority("ADMIN")
+                                .requestMatchers("/approval/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER","VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
                                 .requestMatchers("/project/**", "/corporation/**", "/qna/**", "/faq/**", "/file/**").hasAnyAuthority("VIEWER", "ADMIN")
                         .anyRequest().authenticated()
                 ).cors(it -> {})
