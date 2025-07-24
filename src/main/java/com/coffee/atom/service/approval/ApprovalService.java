@@ -22,6 +22,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 
@@ -387,13 +388,14 @@ public class ApprovalService {
         Method method = approval.getMethod();
         Long requesterId = approval.getRequester().getId();
         String requesterName = approval.getRequester().getUsername();
+        LocalDateTime createdAt = approval.getCreatedAt();
         try {
             ApprovalDetailResponse dto =  switch (type) {
-                case FARMER -> fromJson(json, FarmerDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName);
-                case SECTION -> fromJson(json, SectionDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName);
-                case PURCHASE -> fromJson(json, PurchaseDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName);
-                case VILLAGE_HEAD -> fromJson(json, VillageHeadDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName);
-                case TREES_TRANSACTION -> fromJson(json, TreesTransactionDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName);
+                case FARMER -> fromJson(json, FarmerDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName, createdAt);
+                case SECTION -> fromJson(json, SectionDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName, createdAt);
+                case PURCHASE -> fromJson(json, PurchaseDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName, createdAt);
+                case VILLAGE_HEAD -> fromJson(json, VillageHeadDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName, createdAt);
+                case TREES_TRANSACTION -> fromJson(json, TreesTransactionDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName, createdAt);
             };
             if (dto instanceof VillageHeadDetailResponseDto v) {
                 enrichVillageHeadDetail(v);
@@ -478,7 +480,7 @@ public class ApprovalService {
         approvalRepository.delete(approval);
     }
 
-    private <T extends ApprovalDetailResponse> T fromJson(String json, Class<T> clazz, ServiceType type, Status status, String rejectedReason, Method method, Long requesterId,String requesterName) throws JsonProcessingException {
+    private <T extends ApprovalDetailResponse> T fromJson(String json, Class<T> clazz, ServiceType type, Status status, String rejectedReason, Method method, Long requesterId,String requesterName, LocalDateTime createdAt) throws JsonProcessingException {
         T dto = new ObjectMapper().readValue(json, clazz);
         dto.setStatus(status);
         dto.setServiceType(type);
@@ -486,6 +488,7 @@ public class ApprovalService {
         dto.setMethod(method);
         dto.setRequesterId(requesterId);
         dto.setRequesterName(requesterName);
+        dto.setCreatedAt(createdAt);
         return dto;
     }
 }

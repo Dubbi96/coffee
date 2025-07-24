@@ -8,6 +8,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Data
 @NoArgsConstructor
@@ -23,6 +25,7 @@ public class FarmerDetailResponseDto implements ApprovalDetailResponse {
     private Long sectionId;
     private String sectionName;
     private String identificationPhotoUrl;
+    private LocalDateTime createdAt;
     private Status status;
     private ServiceType serviceType;
     private String rejectedReason;
