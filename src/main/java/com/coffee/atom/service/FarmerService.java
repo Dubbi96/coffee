@@ -8,8 +8,6 @@ import com.coffee.atom.domain.TreesTransaction;
 import com.coffee.atom.domain.TreesTransactionRepository;
 import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.domain.appuser.Role;
-import com.coffee.atom.domain.appuser.ViceAdminDetail;
-import com.coffee.atom.domain.appuser.ViceAdminDetailRepository;
 import com.coffee.atom.dto.FarmerResponseDto;
 import com.coffee.atom.dto.FarmersResponseDto;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +20,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FarmerService {
     private final FarmerRepository farmerRepository;
-    private final ViceAdminDetailRepository viceAdminDetailRepository;
     private final TreesTransactionRepository treesTransactionRepository;
 
     @Transactional(readOnly = true)
@@ -33,12 +30,10 @@ public class FarmerService {
                 return farmerRepository.findAllApprovedFarmersWithVillageHeadAndSection();
             }
             case VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER -> {
-                ViceAdminDetail viceAdminDetail = viceAdminDetailRepository.findById(currentUser.getId())
-                        .orElseThrow(() -> new CustomException("부관리자 정보를 찾을 수 없습니다."));
-                if (viceAdminDetail.getArea() == null) {
+                if (currentUser.getArea() == null) {
                     throw new CustomException(ErrorValue.AREA_NOT_FOUND.getMessage());
                 }
-                return farmerRepository.findAllByAreaId(viceAdminDetail.getArea().getId());
+                return farmerRepository.findAllByAreaId(currentUser.getArea().getId());
             }
             case VILLAGE_HEAD -> {
                 return farmerRepository.findAllByVillageHeadId(currentUser.getId());
@@ -63,7 +58,9 @@ public class FarmerService {
         Farmer farmer = transactions.isEmpty() ? farmerRepository.findById(farmerId)
             .orElseThrow(() -> new CustomException("해당 농부를 찾을 수 없습니다.")) : transactions.get(0).getFarmer();
 
-        String sectionName = farmer.getVillageHead().getSection().getSectionName();
+        String sectionName = farmer.getVillageHead().getSection() != null 
+                ? farmer.getVillageHead().getSection().getSectionName() 
+                : null;
 
         return FarmerResponseDto.builder()
                 .sectionName(sectionName)

@@ -28,11 +28,13 @@ public class TreeTransactionResponseDto {
                 .farmerId(tx.getFarmer().getId())
                 .farmerName(tx.getFarmer().getName())
                 .villageHeadId(tx.getFarmer().getVillageHead().getId())
-                .villageHeadName(tx.getFarmer().getVillageHead().getAppUser().getUsername())
-                .areaId(tx.getFarmer().getVillageHead().getSection().getArea().getId())
-                .areaName(tx.getFarmer().getVillageHead().getSection().getArea().getAreaName())
-                .sectionId(tx.getFarmer().getVillageHead().getSection().getId())
-                .sectionName(tx.getFarmer().getVillageHead().getSection().getSectionName())
+                .villageHeadName(tx.getFarmer().getVillageHead().getUsername())
+                .areaId(tx.getFarmer().getVillageHead().getSection() != null && tx.getFarmer().getVillageHead().getSection().getArea() != null 
+                        ? tx.getFarmer().getVillageHead().getSection().getArea().getId() : null)
+                .areaName(tx.getFarmer().getVillageHead().getSection() != null && tx.getFarmer().getVillageHead().getSection().getArea() != null 
+                        ? tx.getFarmer().getVillageHead().getSection().getArea().getAreaName() : null)
+                .sectionId(tx.getFarmer().getVillageHead().getSection() != null ? tx.getFarmer().getVillageHead().getSection().getId() : null)
+                .sectionName(tx.getFarmer().getVillageHead().getSection() != null ? tx.getFarmer().getVillageHead().getSection().getSectionName() : null)
                 .species(tx.getSpecies())
                 .quantity(tx.getQuantity())
                 .receivedDate(tx.getReceivedDate())

@@ -1,6 +1,5 @@
 package com.coffee.atom.domain.area;
 
-import com.coffee.atom.domain.appuser.ViceAdminDetail;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,7 +31,4 @@ public class Area {
 
     @OneToMany(mappedBy = "area", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Section> sections = new ArrayList<>();
-
-    @OneToMany(mappedBy = "area", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<ViceAdminDetail> viceAdminDetails = new ArrayList<>();
 }

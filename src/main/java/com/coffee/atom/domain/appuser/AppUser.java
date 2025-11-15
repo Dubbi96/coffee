@@ -1,5 +1,7 @@
 package com.coffee.atom.domain.appuser;
 
+import com.coffee.atom.domain.area.Area;
+import com.coffee.atom.domain.area.Section;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,6 +50,37 @@ public class AppUser {
     @Column(name = "is_approved")
     private Boolean isApproved;
 
+    // 부관리자용 필드
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "area_id")
+    private Area area;
+
+    @Column(name = "id_card_url")
+    private String idCardUrl;
+
+    @Column(name = "area_locked")
+    private Boolean areaLocked;
+
+    // 면장용 필드
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "section_id")
+    private Section section;
+
+    @Column(name = "identification_photo_url")
+    private String identificationPhotoUrl;
+
+    @Column(name = "bank_name")
+    private String bankName;
+
+    @Column(name = "account_info")
+    private String accountInfo;
+
+    @Column(name = "contract_url")
+    private String contractUrl;
+
+    @Column(name = "bankbook_url")
+    private String bankbookUrl;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -73,6 +106,44 @@ public class AppUser {
 
     public void approveInstance() {
         this.isApproved = true;
+    }
+
+    // 부관리자 필드 업데이트 메서드
+    public void updateArea(Area area) {
+        this.area = area;
+    }
+
+    public void updateIdCardUrl(String idCardUrl) {
+        this.idCardUrl = idCardUrl;
+    }
+
+    public void updateAreaLocked(Boolean areaLocked) {
+        this.areaLocked = areaLocked;
+    }
+
+    // 면장 필드 업데이트 메서드
+    public void updateSection(Section section) {
+        this.section = section;
+    }
+
+    public void updateIdentificationPhotoUrl(String identificationPhotoUrl) {
+        this.identificationPhotoUrl = identificationPhotoUrl;
+    }
+
+    public void updateBankName(String bankName) {
+        this.bankName = bankName;
+    }
+
+    public void updateAccountInfo(String accountInfo) {
+        this.accountInfo = accountInfo;
+    }
+
+    public void updateContractUrl(String contractUrl) {
+        this.contractUrl = contractUrl;
+    }
+
+    public void updateBankbookUrl(String bankbookUrl) {
+        this.bankbookUrl = bankbookUrl;
     }
 
 }

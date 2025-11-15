@@ -8,8 +8,8 @@ import com.coffee.atom.domain.approval.EntityType;
 import com.coffee.atom.domain.approval.Method;
 import com.coffee.atom.domain.approval.ServiceType;
 import com.coffee.atom.domain.appuser.AppUser;
-import com.coffee.atom.domain.appuser.VillageHeadDetail;
-import com.coffee.atom.domain.appuser.VillageHeadDetailRepository;
+import com.coffee.atom.domain.appuser.AppUserRepository;
+import com.coffee.atom.domain.appuser.Role;
 import com.coffee.atom.domain.area.Section;
 import com.coffee.atom.domain.area.SectionRepository;
 import com.coffee.atom.dto.approval.*;
@@ -34,10 +34,10 @@ public class ApprovalFacadeService {
     private final PurchaseService purchaseService;
     private final SectionService sectionService;
     private final FarmerRepository farmerRepository;
-    private final VillageHeadDetailRepository villageHeadDetailRepository;
     private final SectionRepository sectionRepository;
     private final TreesTransactionRepository treesTransactionRepository;
     private final PurchaseRepository purchaseRepository;
+    private final AppUserRepository appUserRepository;
 
     /**
      * 두 서비스를 Transaction으로 묶어 exception 발생 시 전체 프로세스를 rollback
@@ -56,8 +56,7 @@ public class ApprovalFacadeService {
                 Method.CREATE,
                 ServiceType.VILLAGE_HEAD,
                 List.of(
-                    new EntityReference(EntityType.APP_USER, dto.getId()),
-                    new EntityReference(EntityType.VILLAGE_HEAD_DETAIL, dto.getId())
+                    new EntityReference(EntityType.APP_USER, dto.getId())
                 )
         );
     }
@@ -152,7 +151,7 @@ public class ApprovalFacadeService {
                 Method.UPDATE,
                 ServiceType.VILLAGE_HEAD,
                 List.of(
-                    new EntityReference(EntityType.VILLAGE_HEAD_DETAIL, dto.getId())
+                    new EntityReference(EntityType.APP_USER, dto.getId())
                 )
         );
     }
@@ -209,21 +208,25 @@ public class ApprovalFacadeService {
             Long approverId,
             Long villageHeadId
     ) throws JsonProcessingException {
-        VillageHeadDetail villageHead = villageHeadDetailRepository.findById(villageHeadId)
+        AppUser villageHead = appUserRepository.findById(villageHeadId)
                 .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+
+        if (villageHead.getRole() != Role.VILLAGE_HEAD) {
+            throw new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage());
+        }
 
         // 삭제 요청용 DTO 생성 (파일은 null, URL만 포함)
         ApprovalVillageHeadRequestDto dto = new ApprovalVillageHeadRequestDto(
                 villageHead.getId(),
-                villageHead.getAppUser().getUserId(),
-                villageHead.getAppUser().getPassword(), // 암호화된 값 그대로 사용
-                villageHead.getAppUser().getUsername(),
+                villageHead.getUserId(),
+                villageHead.getPassword(), // 암호화된 값 그대로 사용
+                villageHead.getUsername(),
                 villageHead.getBankName(),
                 villageHead.getAccountInfo(),
                 null, // MultipartFile
                 null,
                 null,
-                villageHead.getSection().getId()
+                villageHead.getSection() != null ? villageHead.getSection().getId() : null
         );
         dto.setIdentificationPhotoUrl(villageHead.getIdentificationPhotoUrl());
         dto.setContractFileUrl(villageHead.getContractUrl());
@@ -235,7 +238,7 @@ public class ApprovalFacadeService {
                 dto,
                 Method.DELETE,
                 ServiceType.VILLAGE_HEAD,
-                List.of(new EntityReference(EntityType.VILLAGE_HEAD_DETAIL, villageHead.getId()))
+                List.of(new EntityReference(EntityType.APP_USER, villageHead.getId()))
         );
     }
 

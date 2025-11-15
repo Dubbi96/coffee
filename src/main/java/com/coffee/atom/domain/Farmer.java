@@ -1,6 +1,6 @@
 package com.coffee.atom.domain;
 
-import com.coffee.atom.domain.appuser.VillageHeadDetail;
+import com.coffee.atom.domain.appuser.AppUser;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,7 +18,7 @@ public class Farmer {
 
     @ManyToOne
     @JoinColumn(name = "village_head_id")
-    private VillageHeadDetail villageHead;
+    private AppUser villageHead;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -41,7 +41,7 @@ public class Farmer {
         this.identificationPhotoUrl = identificationPhotoUrl;
     }
 
-    public void updateVillageHead(VillageHeadDetail villageHeadDetail){
-        this.villageHead = villageHeadDetail;
+    public void updateVillageHead(AppUser villageHead){
+        this.villageHead = villageHead;
     }
 }

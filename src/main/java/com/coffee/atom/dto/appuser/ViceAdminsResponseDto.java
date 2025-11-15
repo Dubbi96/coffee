@@ -1,6 +1,6 @@
 package com.coffee.atom.dto.appuser;
 
-import com.coffee.atom.domain.appuser.ViceAdminDetail;
+import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.domain.area.Area;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,12 +33,12 @@ public class ViceAdminsResponseDto {
         }
     }
 
-    public static ViceAdminsResponseDto from(ViceAdminDetail detail) {
+    public static ViceAdminsResponseDto from(AppUser appUser) {
         return ViceAdminsResponseDto.builder()
-                .id(detail.getId())
-                .userName(detail.getAppUser().getUsername())
-                .userId(detail.getAppUser().getUserId())
-                .areaInfo(AreaInfo.from(detail.getArea()))
+                .id(appUser.getId())
+                .userName(appUser.getUsername())
+                .userId(appUser.getUserId())
+                .areaInfo(AreaInfo.from(appUser.getArea()))
                 .build();
     }
 }

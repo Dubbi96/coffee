@@ -34,8 +34,6 @@ public class AppUserService {
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
-    private final ViceAdminDetailRepository viceAdminDetailRepository;
-    private final VillageHeadDetailRepository villageHeadDetailRepository;
     private final SectionRepository sectionRepository;
     private final GCSUtil gcsUtil;
     private final FarmerRepository farmerRepository;
@@ -63,29 +61,21 @@ public class AppUserService {
         String salt = UUID.randomUUID().toString();
         String encodedPassword = passwordEncoder.encode(dto.getPassword() + salt);
 
-        AppUser newUser = AppUser.builder()
+        AppUser.AppUserBuilder userBuilder = AppUser.builder()
                 .userId(dto.getUserId())
                 .username(dto.getUsername())
                 .password(encodedPassword)
                 .salt(salt)
                 .role(dto.getRole())
-                .isApproved(Boolean.TRUE)
-                .build();
-
-        appUserRepository.save(newUser);
+                .isApproved(Boolean.TRUE);
 
         if (dto.getRole() == Role.VICE_ADMIN_HEAD_OFFICER || dto.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
             Area area = areaRepository.findById(dto.getAreaId())
                     .orElseThrow(() -> new CustomException("존재하지 않는 지역입니다."));
             String idCardUrl = (dto.getIdCardFile() != null) ? uploadFileIfPresent(dto.getIdCardFile(),"vice-admin/", requester) : null;
-
-            ViceAdminDetail detail = ViceAdminDetail.builder()
-                    .appUser(newUser)
-                    .area(area)
-                    .idCardUrl(idCardUrl)
-                    .build();
-
-            viceAdminDetailRepository.save(detail);
+            
+            userBuilder.area(area)
+                    .idCardUrl(idCardUrl);
         }
 
         if (dto.getRole() == Role.VILLAGE_HEAD) {
@@ -96,19 +86,16 @@ public class AppUserService {
             String contractUrl = (dto.getContractFile() != null) ? uploadFileIfPresent(dto.getContractFile(), "village-head/", requester) : null;
             String bankbookUrl = (dto.getBankbookFile() != null) ? uploadFileIfPresent(dto.getBankbookFile(), "village-head/", requester) : null;
 
-            VillageHeadDetail detail = VillageHeadDetail.builder()
-                    .appUser(newUser)
-                    .section(section)
+            userBuilder.section(section)
                     .bankName(dto.getBankName())
                     .accountInfo(dto.getAccountInfo())
                     .identificationPhotoUrl(idUrl)
                     .contractUrl(contractUrl)
-                    .bankbookUrl(bankbookUrl)
-                    .isApproved(true)
-                    .build();
-
-            villageHeadDetailRepository.save(detail);
+                    .bankbookUrl(bankbookUrl);
         }
+
+        AppUser newUser = userBuilder.build();
+        appUserRepository.save(newUser);
 
         return newUser.getId();
     }
@@ -124,22 +111,9 @@ public class AppUserService {
         if ((appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ||
              appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER) &&
             idCardPhoto != null) {
-
-            ViceAdminDetail detail = viceAdminDetailRepository.findById(appUser.getId())
-                    .map(existing -> {
-                        String existingUrl = existing.getIdCardUrl();
-                        String newFileUrl = uploadIdCardToGCS(appUser, idCardPhoto, existingUrl);
-                        return existing.updateIdCardUrl(newFileUrl);
-                    })
-                    .orElseGet(() -> {
-                        String newFileUrl = uploadIdCardToGCS(appUser, idCardPhoto, null);
-                        return ViceAdminDetail.builder()
-                                .appUser(appUser)
-                                .idCardUrl(newFileUrl)
-                                .build();
-                    });
-
-            viceAdminDetailRepository.save(detail);
+            String existingUrl = appUser.getIdCardUrl();
+            String newFileUrl = uploadIdCardToGCS(appUser, idCardPhoto, existingUrl);
+            appUser.updateIdCardUrl(newFileUrl);
         }
 
         appUserRepository.save(appUser);
@@ -150,16 +124,14 @@ public class AppUserService {
         Role role = appUser.getRole();
 
         if (role.equals(Role.ADMIN)) {
-            return villageHeadDetailRepository.findAllWithFarmerCountForAdmin();
+            return appUserRepository.findAllVillageHeadsWithFarmerCountForAdmin();
         }
         else if (role.equals(Role.VICE_ADMIN_HEAD_OFFICER) || role.equals(Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER)) {
-            // ➤ ViceAdminDetail을 기반으로 areaId 추출
-            ViceAdminDetail viceAdminDetail = viceAdminDetailRepository.findByAppUserId(appUser.getId())
-                    .orElseThrow(() -> new CustomException("부 관리자 정보가 존재하지 않습니다."));
-
-            Long areaId = viceAdminDetail.getArea().getId();
-
-            return villageHeadDetailRepository.findAllWithFarmerCountByAreaId(areaId);
+            if (appUser.getArea() == null) {
+                throw new CustomException("부 관리자 정보가 존재하지 않습니다.");
+            }
+            Long areaId = appUser.getArea().getId();
+            return appUserRepository.findAllVillageHeadsWithFarmerCountByAreaId(areaId);
         }
         else {
             throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
@@ -168,21 +140,23 @@ public class AppUserService {
 
     @Transactional(readOnly = true)
     public VillageHeadDetailResponseDto getVillageHead(Long villageHeadId) {
-        VillageHeadDetail villageHeadDetail = villageHeadDetailRepository.findVillageHeadDetailByIsApprovedAndId(Boolean.TRUE, villageHeadId)
-                .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
         AppUser appUser = appUserRepository.findAppUserByIsApprovedAndId(Boolean.TRUE, villageHeadId)
                 .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
+        
+        if (appUser.getRole() != Role.VILLAGE_HEAD || appUser.getSection() == null) {
+            throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage());
+        }
 
         return VillageHeadDetailResponseDto.builder()
                 .userId(appUser.getUserId())
                 .username(appUser.getUsername())
-                .bankName(villageHeadDetail.getBankName())
-                .accountInfo(villageHeadDetail.getAccountInfo())
-                .identificationPhotoUrl(villageHeadDetail.getIdentificationPhotoUrl())
-                .contractFileUrl(villageHeadDetail.getContractUrl())
-                .bankbookPhotoUrl(villageHeadDetail.getBankbookUrl())
-                .areaInfo(VillageHeadDetailResponseDto.AreaInfo.from(villageHeadDetail.getSection().getArea()))
-                .sectionInfo(VillageHeadDetailResponseDto.SectionInfo.from((villageHeadDetail.getSection())))
+                .bankName(appUser.getBankName())
+                .accountInfo(appUser.getAccountInfo())
+                .identificationPhotoUrl(appUser.getIdentificationPhotoUrl())
+                .contractFileUrl(appUser.getContractUrl())
+                .bankbookPhotoUrl(appUser.getBankbookUrl())
+                .areaInfo(VillageHeadDetailResponseDto.AreaInfo.from(appUser.getSection().getArea()))
+                .sectionInfo(VillageHeadDetailResponseDto.SectionInfo.from(appUser.getSection()))
                 .build();
     }
 
@@ -193,7 +167,8 @@ public class AppUserService {
             throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
         }
 
-        List<ViceAdminDetail> viceAdmins = viceAdminDetailRepository.findAllWithAppUserAndArea();
+        List<Role> viceAdminRoles = List.of(Role.VICE_ADMIN_HEAD_OFFICER, Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER);
+        List<AppUser> viceAdmins = appUserRepository.findAllViceAdminsWithArea(viceAdminRoles);
         return viceAdmins.stream()
                 .map(ViceAdminsResponseDto::from)
                 .toList();
@@ -205,15 +180,16 @@ public class AppUserService {
             throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
         }
 
-        ViceAdminDetail detail = viceAdminDetailRepository.findByIdWithAppUserAndArea(viceAdminId)
+        List<Role> viceAdminRoles = List.of(Role.VICE_ADMIN_HEAD_OFFICER, Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER);
+        AppUser viceAdmin = appUserRepository.findViceAdminByIdWithArea(viceAdminId, viceAdminRoles)
                 .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
 
         return ViceAdminResponseDto.builder()
-                .id(detail.getId())
-                .userId(detail.getAppUser().getUserId())
-                .username(detail.getAppUser().getUsername())
-                .idCardUrl(detail.getIdCardUrl())
-                .areaInfo(ViceAdminResponseDto.AreaInfo.from(detail.getArea()))
+                .id(viceAdmin.getId())
+                .userId(viceAdmin.getUserId())
+                .username(viceAdmin.getUsername())
+                .idCardUrl(viceAdmin.getIdCardUrl())
+                .areaInfo(ViceAdminResponseDto.AreaInfo.from(viceAdmin.getArea()))
                 .build();
     }
 
@@ -225,14 +201,6 @@ public class AppUserService {
         String salt = UUID.randomUUID().toString();
         String encodedPassword = passwordEncoder.encode(approvalVillageHeadRequestDto.getPassword() + salt);
 
-        AppUser newUser = AppUser.builder()
-                .userId(approvalVillageHeadRequestDto.getUserId())
-                .username(approvalVillageHeadRequestDto.getUsername())
-                .password(encodedPassword)
-                .salt(salt)
-                .role(Role.VILLAGE_HEAD)
-                .build();
-
         String directory = "village-head/";
         String identificationUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getIdentificationPhoto(), directory, appUser);
         String contractUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getContractFile(), directory, appUser);
@@ -241,17 +209,21 @@ public class AppUserService {
         Section section = sectionRepository.findById(approvalVillageHeadRequestDto.getSectionId())
                         .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Section 입니다."));
         if(!section.getIsApproved()) throw new CustomException(ErrorValue.SECTION_NOT_FOUND.getMessage());
-        VillageHeadDetail newVillageHead = VillageHeadDetail.builder()
-                .appUser(newUser)
+        
+        AppUser newUser = AppUser.builder()
+                .userId(approvalVillageHeadRequestDto.getUserId())
+                .username(approvalVillageHeadRequestDto.getUsername())
+                .password(encodedPassword)
+                .salt(salt)
+                .role(Role.VILLAGE_HEAD)
+                .section(section)
                 .accountInfo(approvalVillageHeadRequestDto.getAccountInfo())
                 .bankName(approvalVillageHeadRequestDto.getBankName())
                 .bankbookUrl(bankbookUrl)
                 .contractUrl(contractUrl)
                 .identificationPhotoUrl(identificationUrl)
-                .section(section)
                 .build();
         appUserRepository.save(newUser);
-        villageHeadDetailRepository.save(newVillageHead);
         approvalVillageHeadRequestDto.setId(newUser.getId());
         approvalVillageHeadRequestDto.setIdentificationPhotoUrl(identificationUrl);
         approvalVillageHeadRequestDto.setContractFileUrl(contractUrl);
@@ -261,14 +233,16 @@ public class AppUserService {
 
     @Transactional
     public ApprovalFarmerRequestDto requestApprovalToCreateFarmer(AppUser appUser, ApprovalFarmerRequestDto approvalFarmerRequestDto) {
-        VillageHeadDetail villageHeadDetail = villageHeadDetailRepository.findById(approvalFarmerRequestDto.getVillageHeadId())
+        AppUser villageHead = appUserRepository.findById(approvalFarmerRequestDto.getVillageHeadId())
                 .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
-        if(!villageHeadDetail.getIsApproved()) throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage());
+        if(villageHead.getRole() != Role.VILLAGE_HEAD || villageHead.getIsApproved() == null || !villageHead.getIsApproved()) {
+            throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage());
+        }
         String directory = "farmer/";
         String identificationUrl = uploadFileIfPresent(approvalFarmerRequestDto.getIdentificationPhoto(), directory, appUser);
         Farmer farmer = Farmer.builder()
                 .name(approvalFarmerRequestDto.getName())
-                .villageHead(villageHeadDetail)
+                .villageHead(villageHead)
                 .identificationPhotoUrl(identificationUrl)
                 .build();
         farmerRepository.save(farmer);
@@ -282,8 +256,9 @@ public class AppUserService {
         AppUser targetUser = appUserRepository.findById(dto.getId())
                 .orElseThrow(() -> new CustomException("수정 대상 면장 사용자를 찾을 수 없습니다."));
 
-        VillageHeadDetail villageHead = villageHeadDetailRepository.findByAppUser(targetUser)
-                .orElseThrow(() -> new CustomException("면장 세부정보를 찾을 수 없습니다."));
+        if (targetUser.getRole() != Role.VILLAGE_HEAD) {
+            throw new CustomException("면장 세부정보를 찾을 수 없습니다.");
+        }
 
         // 비밀번호 갱신
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
@@ -295,38 +270,47 @@ public class AppUserService {
         String directory = "village-head/";
 
         // identification
-        deleteFileIfExists(villageHead.getIdentificationPhotoUrl(), appUser);
+        deleteFileIfExists(targetUser.getIdentificationPhotoUrl(), appUser);
         String newIdentificationUrl = uploadFileIfPresent(dto.getIdentificationPhoto(), directory, appUser);
-        villageHead.updateIdentificationPhotoUrl(newIdentificationUrl);
+        if (newIdentificationUrl != null) {
+            targetUser.updateIdentificationPhotoUrl(newIdentificationUrl);
+        }
 
         // contract
-        deleteFileIfExists(villageHead.getContractUrl(), appUser);
+        deleteFileIfExists(targetUser.getContractUrl(), appUser);
         String newContractUrl = uploadFileIfPresent(dto.getContractFile(), directory, appUser);
-        villageHead.updateContractUrl(newContractUrl);
+        if (newContractUrl != null) {
+            targetUser.updateContractUrl(newContractUrl);
+        }
 
         // bankbook
-        deleteFileIfExists(villageHead.getBankbookUrl(), appUser);
+        deleteFileIfExists(targetUser.getBankbookUrl(), appUser);
         String newBankbookUrl = uploadFileIfPresent(dto.getBankbookPhoto(), directory, appUser);
-        villageHead.updateBankbookUrl(newBankbookUrl);
+        if (newBankbookUrl != null) {
+            targetUser.updateBankbookUrl(newBankbookUrl);
+        }
 
         // 기타 정보 갱신
-        villageHead.updateAccountInfo(dto.getAccountInfo());
-        villageHead.updateBankName(dto.getBankName());
+        if (dto.getAccountInfo() != null) {
+            targetUser.updateAccountInfo(dto.getAccountInfo());
+        }
+        if (dto.getBankName() != null) {
+            targetUser.updateBankName(dto.getBankName());
+        }
 
         // Section 갱신
         Section section = sectionRepository.findById(dto.getSectionId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Section 입니다."));
         if (!Boolean.TRUE.equals(section.getIsApproved()))
             throw new CustomException(ErrorValue.SECTION_NOT_FOUND.getMessage());
-        villageHead.updateSection(section);
+        targetUser.updateSection(section);
 
         appUserRepository.save(targetUser);
-        villageHeadDetailRepository.save(villageHead);
 
         // 결과 DTO에 URL 세팅
-        dto.setIdentificationPhotoUrl(villageHead.getIdentificationPhotoUrl());
-        dto.setContractFileUrl(villageHead.getContractUrl());
-        dto.setBankbookPhotoUrl(villageHead.getBankbookUrl());
+        dto.setIdentificationPhotoUrl(targetUser.getIdentificationPhotoUrl());
+        dto.setContractFileUrl(targetUser.getContractUrl());
+        dto.setBankbookPhotoUrl(targetUser.getBankbookUrl());
 
         return dto;
     }
@@ -342,34 +326,32 @@ public class AppUserService {
         AppUser targetUser = appUserRepository.findById(viceAdminId)
                 .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
 
+        if (targetUser.getRole() != Role.VICE_ADMIN_HEAD_OFFICER && 
+            targetUser.getRole() != Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+            throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage());
+        }
+
         targetUser.updateUserName(dto.getUsername());
         targetUser.updateUserId(dto.getUserId());
 
         Area area = areaRepository.findById(dto.getAreaId())
                 .orElseThrow(() -> new CustomException("존재하지 않는 지역입니다."));
 
-        ViceAdminDetail detail = viceAdminDetailRepository.findById(viceAdminId)
-            .map(existing -> {
-                String newFileUrl = dto.getIdCardFile() != null && !dto.getIdCardFile().isEmpty()
-                        ? uploadIdCardToGCS(targetUser, dto.getIdCardFile(), existing.getIdCardUrl())
-                        : existing.getIdCardUrl();
-                return existing.updateIdCardUrl(newFileUrl);
-            })
-            .orElseGet(() -> {
-                String newFileUrl = dto.getIdCardFile() != null && !dto.getIdCardFile().isEmpty()
-                        ? uploadIdCardToGCS(targetUser, dto.getIdCardFile(), null)
-                        : null;
-                return ViceAdminDetail.builder()
-                        .appUser(targetUser)
-                        .area(area)
-                        .idCardUrl(newFileUrl)
-                        .build();
-            });
+        // 라오스 부관리자 지역 이동 제한 체크
+        if (targetUser.getAreaLocked() != null && targetUser.getAreaLocked() && 
+            targetUser.getArea() != null && !targetUser.getArea().getId().equals(area.getId())) {
+            throw new CustomException("라오스 부관리자는 지역 변경이 불가능합니다.");
+        }
 
-        detail.updateArea(area);
+        // ID 카드 파일 업데이트
+        if (dto.getIdCardFile() != null && !dto.getIdCardFile().isEmpty()) {
+            String newFileUrl = uploadIdCardToGCS(targetUser, dto.getIdCardFile(), targetUser.getIdCardUrl());
+            targetUser.updateIdCardUrl(newFileUrl);
+        }
+
+        targetUser.updateArea(area);
 
         appUserRepository.save(targetUser);
-        viceAdminDetailRepository.save(detail);
     }
 
     @Transactional(readOnly = true)
@@ -387,28 +369,29 @@ public class AppUserService {
                     .build();
 
             case VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER -> {
-                ViceAdminDetail detail = viceAdminDetailRepository.findById(appUser.getId())
-                        .orElseThrow(() -> new CustomException("부관리자 정보가 없습니다."));
+                if (appUser.getArea() == null) {
+                    throw new CustomException("부관리자 정보가 없습니다.");
+                }
                 yield ViceAdminMyInfoDto.builder()
                         .appUser(userDto)
-                        .idCardUrl(detail.getIdCardUrl())
-                        .area(toAreaDto(detail.getArea()))
+                        .idCardUrl(appUser.getIdCardUrl())
+                        .area(toAreaDto(appUser.getArea()))
                         .build();
             }
 
             case VILLAGE_HEAD -> {
-                VillageHeadDetail detail = villageHeadDetailRepository
-                        .findVillageHeadDetailByIsApprovedAndId(Boolean.TRUE, appUser.getId())
-                        .orElseThrow(() -> new CustomException("승인된 면장 정보가 없습니다."));
-                Section section = detail.getSection();
+                if (appUser.getSection() == null) {
+                    throw new CustomException("승인된 면장 정보가 없습니다.");
+                }
+                Section section = appUser.getSection();
                 Area area = section.getArea();
                 yield VillageHeadMyInfoDto.builder()
                         .appUser(userDto)
-                        .identificationPhotoUrl(detail.getIdentificationPhotoUrl())
-                        .bankName(detail.getBankName())
-                        .accountInfo(detail.getAccountInfo())
-                        .contractUrl(detail.getContractUrl())
-                        .bankbookUrl(detail.getBankbookUrl())
+                        .identificationPhotoUrl(appUser.getIdentificationPhotoUrl())
+                        .bankName(appUser.getBankName())
+                        .accountInfo(appUser.getAccountInfo())
+                        .contractUrl(appUser.getContractUrl())
+                        .bankbookUrl(appUser.getBankbookUrl())
                         .section(toSectionDto(section))
                         .area(toAreaDto(area))
                         .build();
@@ -439,9 +422,9 @@ public class AppUserService {
         Farmer farmer = farmerRepository.findById(dto.getId())
                 .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
 
-        VillageHeadDetail villageHeadDetail = villageHeadDetailRepository.findById(dto.getVillageHeadId())
+        AppUser villageHead = appUserRepository.findById(dto.getVillageHeadId())
                 .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
-        if (!villageHeadDetail.getIsApproved())
+        if (villageHead.getRole() != Role.VILLAGE_HEAD || villageHead.getIsApproved() == null || !villageHead.getIsApproved())
             throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage());
 
         String directory = "farmer/";

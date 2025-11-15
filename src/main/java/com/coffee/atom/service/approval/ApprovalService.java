@@ -35,11 +35,9 @@ public class ApprovalService {
     private final RequestedInstanceRepository requestedInstanceRepository;
     private final AppUserRepository appUserRepository;
     private final ObjectMapper objectMapper;
-    private final ViceAdminDetailRepository viceAdminDetailRepository;
     private final TreesTransactionRepository treesTransactionRepository;
     private final SectionRepository sectionRepository;
     private final FarmerRepository farmerRepository;
-    private final VillageHeadDetailRepository villageHeadDetailRepository;
     private final PurchaseRepository purchaseRepository;
 
     @Transactional
@@ -95,10 +93,12 @@ public class ApprovalService {
             }
             case VICE_ADMIN_HEAD_OFFICER -> {
                 // 나 또는 같은 Area의 농림부 부관리자 요청만
-                Long myId = appUser.getId();
-                Long areaId = viceAdminDetailRepository.findAreaIdByAppUser_Id(myId)
-                        .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND.getMessage()));
-                List<Long> requesterIds = viceAdminDetailRepository.findViceAdminUserIdsByAreaId(areaId);
+                if (appUser.getArea() == null) {
+                    throw new CustomException(ErrorValue.AREA_NOT_FOUND.getMessage());
+                }
+                Long areaId = appUser.getArea().getId();
+                List<Role> viceAdminRoles = List.of(Role.VICE_ADMIN_HEAD_OFFICER, Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER);
+                List<Long> requesterIds = appUserRepository.findViceAdminUserIdsByAreaId(areaId, viceAdminRoles);
                 spec = spec.and((root, query, cb) -> root.get("requester").get("id").in(requesterIds));
             }
             case VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ->
@@ -147,9 +147,9 @@ public class ApprovalService {
             Long instanceId = instance.getInstanceId();
 
             switch (type) {
-                case VILLAGE_HEAD_DETAIL -> {
-                    VillageHeadDetail entity = villageHeadDetailRepository.findById(instanceId)
-                            .orElseThrow(() -> new CustomException("해당 VillageHeadDetail이 존재하지 않습니다."));
+                case APP_USER -> {
+                    AppUser entity = appUserRepository.findById(instanceId)
+                            .orElseThrow(() -> new CustomException("해당 AppUser가 존재하지 않습니다."));
                     entity.approveInstance();
                 }
                 case FARMER -> {
@@ -165,11 +165,6 @@ public class ApprovalService {
                 case TREES_TRANSACTION -> {
                     TreesTransaction entity = treesTransactionRepository.findById(instanceId)
                             .orElseThrow(() -> new CustomException("해당 TreesTransaction이 존재하지 않습니다."));
-                    entity.approveInstance();
-                }
-                case APP_USER -> {
-                    AppUser entity = appUserRepository.findById(instanceId)
-                            .orElseThrow(() -> new CustomException("해당 AppUser가 존재하지 않습니다."));
                     entity.approveInstance();
                 }
                 case PURCHASE -> {
@@ -192,41 +187,43 @@ public class ApprovalService {
             try {
                 JsonNode jsonNode = new ObjectMapper().readTree(requestedData);
 
-                if (type == EntityType.VILLAGE_HEAD_DETAIL) {
-                    VillageHeadDetail villageHead = villageHeadDetailRepository.findById(id)
-                            .orElseThrow(() -> new CustomException("해당 VillageHeadDetail이 존재하지 않습니다."));
+                if (type == EntityType.APP_USER) {
+                    AppUser appUser = appUserRepository.findById(id)
+                            .orElseThrow(() -> new CustomException("해당 AppUser가 존재하지 않습니다."));
 
-                    // 계좌정보 및 은행명 업데이트
-                    if (jsonNode.has("accountInfo")) {
-                        villageHead.updateAccountInfo(jsonNode.get("accountInfo").asText());
-                    }
-
-                    if (jsonNode.has("bankName")) {
-                        villageHead.updateBankName(jsonNode.get("bankName").asText());
-                    }
-
-                    // section 변경
-                    if (jsonNode.has("sectionId")) {
-                        Section section = sectionRepository.findById(jsonNode.get("sectionId").asLong())
-                                .orElseThrow(() -> new CustomException("Section이 존재하지 않습니다."));
-                        if (!section.getIsApproved()) {
-                            throw new CustomException("승인되지 않은 Section입니다.");
+                    if (appUser.getRole() == Role.VILLAGE_HEAD) {
+                        // 계좌정보 및 은행명 업데이트
+                        if (jsonNode.has("accountInfo")) {
+                            appUser.updateAccountInfo(jsonNode.get("accountInfo").asText());
                         }
-                        villageHead.updateSection(section);
+
+                        if (jsonNode.has("bankName")) {
+                            appUser.updateBankName(jsonNode.get("bankName").asText());
+                        }
+
+                        // section 변경
+                        if (jsonNode.has("sectionId")) {
+                            Section section = sectionRepository.findById(jsonNode.get("sectionId").asLong())
+                                    .orElseThrow(() -> new CustomException("Section이 존재하지 않습니다."));
+                            if (!section.getIsApproved()) {
+                                throw new CustomException("승인되지 않은 Section입니다.");
+                            }
+                            appUser.updateSection(section);
+                        }
+
+                        // 식별 URL들 (옵셔널)
+                        if (jsonNode.has("identificationPhotoUrl")) {
+                            appUser.updateIdentificationPhotoUrl(jsonNode.get("identificationPhotoUrl").asText());
+                        }
+                        if (jsonNode.has("contractFileUrl")) {
+                            appUser.updateContractUrl(jsonNode.get("contractFileUrl").asText());
+                        }
+                        if (jsonNode.has("bankbookPhotoUrl")) {
+                            appUser.updateBankbookUrl(jsonNode.get("bankbookPhotoUrl").asText());
+                        }
                     }
 
-                    // 식별 URL들 (옵셔널)
-                    if (jsonNode.has("identificationPhotoUrl")) {
-                        villageHead.updateIdentificationPhotoUrl(jsonNode.get("identificationPhotoUrl").asText());
-                    }
-                    if (jsonNode.has("contractFileUrl")) {
-                        villageHead.updateContractUrl(jsonNode.get("contractFileUrl").asText());
-                    }
-                    if (jsonNode.has("bankbookPhotoUrl")) {
-                        villageHead.updateBankbookUrl(jsonNode.get("bankbookPhotoUrl").asText());
-                    }
-
-                    villageHeadDetailRepository.save(villageHead);
+                    appUserRepository.save(appUser);
                 }
 
                 if (type == EntityType.FARMER) {
@@ -246,12 +243,13 @@ public class ApprovalService {
                     // 소속 면장 변경
                     if (jsonNode.has("villageHeadId")) {
                         Long villageHeadId = jsonNode.get("villageHeadId").asLong();
-                        VillageHeadDetail villageHeadDetail = villageHeadDetailRepository.findById(villageHeadId)
+                        AppUser villageHead = appUserRepository.findById(villageHeadId)
                                 .orElseThrow(() -> new CustomException("면장이 존재하지 않습니다."));
-                        if (!villageHeadDetail.getIsApproved()) {
+                        if (villageHead.getRole() != Role.VILLAGE_HEAD || 
+                            villageHead.getIsApproved() == null || !villageHead.getIsApproved()) {
                             throw new CustomException("승인되지 않은 면장입니다.");
                         }
-                        farmer.updateVillageHead(villageHeadDetail);
+                        farmer.updateVillageHead(villageHead);
                     }
 
                     farmerRepository.save(farmer);
@@ -273,9 +271,9 @@ public class ApprovalService {
             Long id = instance.getInstanceId();
 
             switch (type) {
-                case VILLAGE_HEAD_DETAIL -> {
-                    villageHeadDetailRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
-                    villageHeadDetailRepository.deleteById(id);
+                case APP_USER -> {
+                    appUserRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                    appUserRepository.deleteById(id);
                 }
                 case FARMER ->{
                     farmerRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
@@ -288,10 +286,6 @@ public class ApprovalService {
                 case TREES_TRANSACTION ->{
                     treesTransactionRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
                     treesTransactionRepository.deleteById(id);
-                }
-                case APP_USER ->{
-                    appUserRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
-                    appUserRepository.deleteById(id);
                 }
                 case PURCHASE -> {
                     purchaseRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
@@ -321,11 +315,10 @@ public class ApprovalService {
     private int deletePriority(EntityType type) {
         return switch (type) {
             case FARMER -> 1;
-            case VILLAGE_HEAD_DETAIL -> 2;
+            case APP_USER -> 2;
             case SECTION -> 3;
             case PURCHASE -> 4;
             case TREES_TRANSACTION -> 5;
-            case APP_USER -> 6;
             default -> 99;
         };
     }
@@ -344,11 +337,10 @@ public class ApprovalService {
             Long id = instance.getInstanceId();
 
             switch (type) {
-                case VILLAGE_HEAD_DETAIL -> villageHeadDetailRepository.deleteById(id);
+                case APP_USER -> appUserRepository.deleteById(id);
                 case FARMER -> farmerRepository.deleteById(id);
                 case SECTION -> sectionRepository.deleteById(id);
                 case TREES_TRANSACTION -> treesTransactionRepository.deleteById(id);
-                case APP_USER -> appUserRepository.deleteById(id);
                 case PURCHASE -> purchaseRepository.deleteById(id);
                 default -> throw new UnsupportedOperationException("삭제 불가 엔티티입니다: " + type);
             }
@@ -361,16 +353,14 @@ public class ApprovalService {
             Long id = instance.getInstanceId();
 
             switch (type) {
-                case VILLAGE_HEAD_DETAIL -> villageHeadDetailRepository.findById(id)
-                    .ifPresent(VillageHeadDetail::approveInstance);
+                case APP_USER -> appUserRepository.findById(id)
+                    .ifPresent(AppUser::approveInstance);
                 case FARMER -> farmerRepository.findById(id)
                     .ifPresent(Farmer::approveInstance);
                 case SECTION -> sectionRepository.findById(id)
                     .ifPresent(Section::approveInstance);
                 case TREES_TRANSACTION -> treesTransactionRepository.findById(id)
                     .ifPresent(TreesTransaction::approveInstance);
-                case APP_USER -> appUserRepository.findById(id)
-                    .ifPresent(AppUser::approveInstance);
                 case PURCHASE -> purchaseRepository.findById(id)
                         .ifPresent(Purchase::approveInstance);
                 default -> throw new UnsupportedOperationException("복구 불가 엔티티입니다: " + type);
@@ -420,16 +410,14 @@ public class ApprovalService {
         farmerRepository.findById(farmerId).ifPresent(farmer -> {
             dto.setFarmerName(farmer.getName());
 
-            VillageHeadDetail villageHead = farmer.getVillageHead();
-            if (villageHead != null) {
+            AppUser villageHead = farmer.getVillageHead();
+            if (villageHead != null && villageHead.getSection() != null) {
                 Section section = villageHead.getSection();
-                if (section != null) {
-                    dto.setSectionName(section.getSectionName());
+                dto.setSectionName(section.getSectionName());
 
-                    Area area = section.getArea();
-                    if (area != null) {
-                        dto.setAreaName(area.getAreaName());
-                    }
+                Area area = section.getArea();
+                if (area != null) {
+                    dto.setAreaName(area.getAreaName());
                 }
             }
         });
@@ -453,14 +441,16 @@ public class ApprovalService {
         Long villageHeadId = dto.getVillageHeadId();
         if (villageHeadId == null) return;
 
-        villageHeadDetailRepository.findById(villageHeadId).ifPresent(villageHead -> {
-            Section section = villageHead.getSection();
-            dto.setSectionId(section.getId());
-            dto.setSectionName(section.getSectionName());
+        appUserRepository.findById(villageHeadId).ifPresent(villageHead -> {
+            if (villageHead.getSection() != null) {
+                Section section = villageHead.getSection();
+                dto.setSectionId(section.getId());
+                dto.setSectionName(section.getSectionName());
 
-            if (section.getArea() != null) {
-                dto.setAreaId(section.getArea().getId());
-                dto.setAreaName(section.getArea().getAreaName());
+                if (section.getArea() != null) {
+                    dto.setAreaId(section.getArea().getId());
+                    dto.setAreaName(section.getArea().getAreaName());
+                }
             }
         });
     }
