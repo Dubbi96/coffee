@@ -4,8 +4,6 @@ import com.coffee.atom.config.error.CustomException;
 import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.domain.appuser.Role;
-import com.coffee.atom.domain.appuser.ViceAdminDetail;
-import com.coffee.atom.domain.appuser.ViceAdminDetailRepository;
 import com.coffee.atom.domain.area.Area;
 import com.coffee.atom.domain.area.AreaRepository;
 import com.coffee.atom.domain.area.Section;
@@ -22,19 +20,25 @@ import org.springframework.transaction.annotation.Transactional;
 public class SectionService {
     private final AreaRepository areaRepository;
     private final SectionRepository sectionRepository;
-    private final ViceAdminDetailRepository viceAdminDetailRepository;
 
     @Transactional
     public ApprovalSectionRequestDto requestApprovalToCreateSection(AppUser requester, ApprovalSectionRequestDto approvalSectionRequestDto) {
-        if(requester.getRole().equals(Role.VILLAGE_HEAD)) throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
-        ViceAdminDetail viceAdminDetail = viceAdminDetailRepository.findById(requester.getId()).orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
-        if(viceAdminDetail.getArea() == null) throw new CustomException(ErrorValue.AREA_NOT_FOUND.getMessage());
+        if(requester.getRole().equals(Role.VILLAGE_HEAD)) throw new CustomException(ErrorValue.UNAUTHORIZED);
+        
+        // 부관리자 권한 체크
+        if (requester.getRole() != Role.VICE_ADMIN_HEAD_OFFICER && 
+            requester.getRole() != Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+        
+        Area area = requester.getArea();
+        if(area == null) throw new CustomException(ErrorValue.AREA_NOT_FOUND);
 
         Section section = Section.builder()
                 .sectionName(approvalSectionRequestDto.getSectionName())
                 .latitude(approvalSectionRequestDto.getLatitude())
                 .longitude(approvalSectionRequestDto.getLongitude())
-                .area(viceAdminDetail.getArea())
+                .area(area)
                 .build();
         sectionRepository.save(section);
         approvalSectionRequestDto.setId(section.getId());
@@ -42,8 +46,13 @@ public class SectionService {
     }
 
     @Transactional
-    public void createSection(SectionRequestDto sectionRequestDto) {
-        Area area = areaRepository.findById(sectionRequestDto.getAreaId()).orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND.getMessage()));
+    public void createSection(AppUser requester, SectionRequestDto sectionRequestDto) {
+        // 총 관리자만 Section 생성 가능
+        if (!requester.getRole().equals(Role.ADMIN)) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+
+        Area area = areaRepository.findById(sectionRequestDto.getAreaId()).orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND));
         Section section = Section.builder()
                 .sectionName(sectionRequestDto.getSectionName())
                 .latitude(sectionRequestDto.getLatitude())
@@ -56,14 +65,14 @@ public class SectionService {
 
     @Transactional
     public void deleteSection(Long sectionId) {
-        sectionRepository.findById(sectionId).orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND.getMessage()));
+        sectionRepository.findById(sectionId).orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
         sectionRepository.deleteById(sectionId);
     }
 
     @Transactional(readOnly = true)
     public SectionDto getSectionById(Long sectionId) {
         Section section = sectionRepository.findById(sectionId)
-                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
 
         return SectionDto.builder()
                 .id(section.getId())

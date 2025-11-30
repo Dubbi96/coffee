@@ -5,7 +5,6 @@ import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.domain.Purchase;
 import com.coffee.atom.domain.PurchaseRepository;
 import com.coffee.atom.domain.appuser.*;
-import com.coffee.atom.domain.area.Area;
 import com.coffee.atom.dto.PurchaseResponseDto;
 import com.coffee.atom.dto.approval.ApprovalPurchaseRequestDto;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +21,39 @@ public class PurchaseService {
 
     @Transactional
     public ApprovalPurchaseRequestDto requestApprovalToCreatePurchase(AppUser requester, ApprovalPurchaseRequestDto approvalPurchaseRequestDto) {
-        if (requester.getRole() != Role.VICE_ADMIN_HEAD_OFFICER && requester.getRole() != Role.ADMIN) throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
+        // 부관리자만 Purchase 생성 가능
+        if (requester.getRole() != Role.VICE_ADMIN_HEAD_OFFICER && 
+            requester.getRole() != Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER && 
+            requester.getRole() != Role.ADMIN) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+
+        // 면장 조회 및 검증
+        AppUser villageHead = appUserRepository.findById(approvalPurchaseRequestDto.getVillageHeadId())
+                .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND));
+        
+        if (villageHead.getRole() != Role.VILLAGE_HEAD || 
+            villageHead.getIsApproved() == null || 
+            !villageHead.getIsApproved()) {
+            throw new CustomException(ErrorValue.VILLAGE_HEAD_NOT_APPROVED);
+        }
+
+        // 부관리자의 경우 본인이 배정된 지역의 면장인지 확인
+        if (requester.getRole() == Role.VICE_ADMIN_HEAD_OFFICER || 
+            requester.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+            if (requester.getArea() == null) {
+                throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
+            }
+            if (villageHead.getSection() == null || 
+                villageHead.getSection().getArea() == null ||
+                !villageHead.getSection().getArea().getId().equals(requester.getArea().getId())) {
+                throw new CustomException(ErrorValue.VILLAGE_HEAD_AREA_MISMATCH);
+            }
+        }
+
         Purchase purchase = Purchase.builder()
                 .manager(requester)
+                .villageHead(villageHead)
                 .purchaseDate(approvalPurchaseRequestDto.getPurchaseDate())
                 .quantity(approvalPurchaseRequestDto.getQuantity())
                 .unitPrice(approvalPurchaseRequestDto.getUnitPrice())
@@ -45,36 +74,16 @@ public class PurchaseService {
                     .map(PurchaseResponseDto::from)
                     .toList();
 
-            case VICE_ADMIN_HEAD_OFFICER -> purchaseRepository.findByIsApprovedTrueAndManager_IdOrderByPurchaseDateDesc(appUser.getId()).stream()
+            case VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER -> 
+                    purchaseRepository.findByIsApprovedTrueAndManager_IdOrderByPurchaseDateDesc(appUser.getId()).stream()
                     .map(PurchaseResponseDto::from)
                     .toList();
 
-            case VILLAGE_HEAD -> {
-                // 1. 면장 정보에서 Section → Area 확인
-                if (appUser.getSection() == null || appUser.getSection().getArea() == null) {
-                    throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage());
-                }
-                Area area = appUser.getSection().getArea();
-
-                // 2. 해당 Area를 담당하는 부관리자 조회
-                List<AppUser> viceAdmins = appUserRepository.findByAreaAndRole(area, Role.VICE_ADMIN_HEAD_OFFICER);
-
-                if (viceAdmins.isEmpty()) {
-                    throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage());
-                }
-
-                // 예: 첫 번째 부관리자 선택 (기준 필요 시 정렬 후 선택)
-                AppUser selectedViceAdmin = viceAdmins.get(0);
-                Long viceAdminId = selectedViceAdmin.getId();
-
-                // 3. 해당 부관리자의 구매 내역 조회
-                yield purchaseRepository.findByIsApprovedTrueAndManager_IdOrderByPurchaseDateDesc(viceAdminId).stream()
-                        .map(PurchaseResponseDto::from)
-                        .toList();
-            }
-
-            case VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ->
-                    throw new CustomException(ErrorValue.UNAUTHORIZED_SERVICE.getMessage());
+            case VILLAGE_HEAD -> 
+                    // 면장은 본인과 1:1 관계인 Purchase만 조회
+                    purchaseRepository.findByIsApprovedTrueAndVillageHead_IdOrderByPurchaseDateDesc(appUser.getId()).stream()
+                    .map(PurchaseResponseDto::from)
+                    .toList();
         };
     }
 }

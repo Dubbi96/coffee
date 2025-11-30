@@ -1,5 +1,7 @@
 package com.coffee.atom.util;
 
+import com.coffee.atom.config.error.CustomException;
+import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.domain.file.FileEventLogType;
 import com.coffee.atom.service.file.FileEventLogService;
@@ -30,24 +32,33 @@ public class GCSUtil {
 
     private final FileEventLogService fileEventLogService;
     private final Storage storage;
+    private final String gcsUrlPrefix;
 
     public GCSUtil(@Value("${gcs.credentials.path}") String credentialsPath,
                    @Value("${gcs.project.id}") String projectId,
                    FileEventLogService fileEventLogService) throws IOException {
         this.fileEventLogService = fileEventLogService;
-        InputStream keyFile;
-        if (credentialsPath.startsWith("classpath:")) {
-            keyFile = new ClassPathResource(credentialsPath.replace("classpath:", "")).getInputStream();
-        } else if (credentialsPath.startsWith("/") || credentialsPath.startsWith("file:")) {
-            keyFile = new FileInputStream(credentialsPath);
-        } else {
-            keyFile = new ClassPathResource(credentialsPath).getInputStream();
+        
+        // credentials 파일을 try-with-resources로 처리하여 리소스 누수 방지
+        try (InputStream keyFile = getCredentialsInputStream(credentialsPath)) {
+            storage = StorageOptions.newBuilder()
+                    .setProjectId(projectId)
+                    .setCredentials(GoogleCredentials.fromStream(keyFile))
+                    .build().getService();
         }
+        
+        // GCS URL prefix를 미리 계산하여 재사용
+        this.gcsUrlPrefix = "https://storage.googleapis.com/" + bucketName + "/";
+    }
 
-        storage = StorageOptions.newBuilder()
-                .setProjectId(projectId)
-                .setCredentials(GoogleCredentials.fromStream(keyFile))
-                .build().getService();
+    private InputStream getCredentialsInputStream(String credentialsPath) throws IOException {
+        if (credentialsPath.startsWith("classpath:")) {
+            return new ClassPathResource(credentialsPath.replace("classpath:", "")).getInputStream();
+        } else if (credentialsPath.startsWith("/") || credentialsPath.startsWith("file:")) {
+            return new FileInputStream(credentialsPath);
+        } else {
+            return new ClassPathResource(credentialsPath).getInputStream();
+        }
     }
 
     @PreDestroy
@@ -59,18 +70,19 @@ public class GCSUtil {
     public String uploadFileToGCS(String directory, MultipartFile file, AppUser appUser) throws IOException {
         String originalFilename = file.getOriginalFilename();
         String savedFileName = generateUniqueFileName(originalFilename);
-        String filePath = (directory != null ? directory + "/" : "") + savedFileName;
+        String filePath = buildFilePath(directory, savedFileName);
+        String fileUrl = gcsUrlPrefix + filePath;
 
         try {
-            storage.create(
-                    BlobInfo.newBuilder(bucketName, filePath)
-                            .setContentType(file.getContentType())
-                            .setContentDisposition("inline")
-                            .build(),
-                    file.getBytes()
-            );
+            BlobInfo blobInfo = BlobInfo.newBuilder(bucketName, filePath)
+                    .setContentType(file.getContentType())
+                    .setContentDisposition("inline")
+                    .build();
 
-            String fileUrl = "https://storage.googleapis.com/" + bucketName + "/" + filePath;
+            // MultipartFile은 이미 메모리에 로드되어 있으므로 getBytes() 사용
+            // 큰 파일의 경우에도 MultipartFile이 이미 메모리에 있으므로 getBytes()가 효율적
+            storage.create(blobInfo, file.getBytes());
+
             fileEventLogService.saveLog(appUser, FileEventLogType.UPLOAD, file, fileUrl, true);
             return fileUrl;
         } catch (IOException e) {
@@ -79,12 +91,40 @@ public class GCSUtil {
         }
     }
 
+    private String buildFilePath(String directory, String fileName) {
+        return (directory != null && !directory.isEmpty()) ? directory + "/" + fileName : fileName;
+    }
+
     public List<String> uploadFilesToGCS(String directory, List<MultipartFile> files, AppUser appUser) throws IOException {
-        List<String> urls = new ArrayList<>();
+        // uploadFileToGCS 내부에서 이미 개별 로그를 저장하므로
+        // 배치 로그만 별도로 저장 (중복 방지)
+        List<String> urls = new ArrayList<>(files.size());
+        
         for (MultipartFile file : files) {
-            urls.add(uploadFileToGCS(directory, file, appUser));
+            try {
+                String url = uploadFileToGCS(directory, file, appUser);
+                urls.add(url);
+            } catch (IOException e) {
+                // 실패한 파일의 경우 null 추가 (개별 로그는 uploadFileToGCS에서 이미 저장됨)
+                urls.add(null);
+                log.warn("파일 업로드 실패: {}", file.getOriginalFilename(), e);
+            }
         }
-        fileEventLogService.saveLogs(appUser, FileEventLogType.UPLOAD, files, urls, true);
+        
+        // 성공한 파일들에 대한 배치 로그 저장 (개별 로그와 별도로)
+        List<MultipartFile> successFiles = new ArrayList<>();
+        List<String> successUrls = new ArrayList<>();
+        for (int i = 0; i < files.size(); i++) {
+            if (urls.get(i) != null) {
+                successFiles.add(files.get(i));
+                successUrls.add(urls.get(i));
+            }
+        }
+        
+        if (!successFiles.isEmpty()) {
+            fileEventLogService.saveLogs(appUser, FileEventLogType.UPLOAD, successFiles, successUrls, true);
+        }
+        
         return urls;
     }
 
@@ -115,31 +155,63 @@ public class GCSUtil {
     }
 
     public void deleteFileFromGCS(List<String> fileUrls, AppUser appUser) {
-        for (String url : fileUrls) {
-            deleteFileFromGCS(url, appUser);
+        if (fileUrls == null || fileUrls.isEmpty()) {
+            return;
         }
+
+        // 배치 삭제를 위해 BlobId 리스트 생성
+        List<BlobId> blobIds = new ArrayList<>(fileUrls.size());
+        for (String fileUrl : fileUrls) {
+            try {
+                String objectName = extractObjectName(fileUrl);
+                blobIds.add(BlobId.of(bucketName, objectName));
+            } catch (IllegalArgumentException e) {
+                log.warn("잘못된 파일 URL로 인해 삭제 건너뜀: {}", fileUrl, e);
+            }
+        }
+
+        // 배치 삭제 실행
+        if (!blobIds.isEmpty()) {
+            List<Boolean> deleteResults = storage.delete(blobIds);
+            
+            // 삭제 실패한 파일이 있는지 확인
+            for (int i = 0; i < deleteResults.size(); i++) {
+                if (!deleteResults.get(i)) {
+                    log.warn("파일 삭제 실패: {}", fileUrls.get(i));
+                }
+            }
+        }
+
+        // 배치 로그 저장 (개별 삭제와 달리 한 번만 저장)
         fileEventLogService.saveDeleteLogs(fileUrls, appUser);
     }
 
     public MediaType getMediaType(String fileUrl) {
-        String lowerUrl = fileUrl.toLowerCase();
-
-        if (lowerUrl.endsWith(".png")) {
-            return MediaType.IMAGE_PNG;
-        } else if (lowerUrl.endsWith(".jpg") || lowerUrl.endsWith(".jpeg")) {
-            return MediaType.IMAGE_JPEG;
-        } else if (lowerUrl.endsWith(".gif")) {
-            return MediaType.IMAGE_GIF;
-        } else {
+        if (fileUrl == null || fileUrl.isEmpty()) {
             return MediaType.APPLICATION_OCTET_STREAM;
         }
+
+        // 마지막 점의 위치를 찾아 확장자 추출 (더 효율적)
+        int lastDotIndex = fileUrl.lastIndexOf('.');
+        if (lastDotIndex == -1 || lastDotIndex == fileUrl.length() - 1) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+
+        String extension = fileUrl.substring(lastDotIndex + 1).toLowerCase();
+        
+        return switch (extension) {
+            case "png" -> MediaType.IMAGE_PNG;
+            case "jpg", "jpeg" -> MediaType.IMAGE_JPEG;
+            case "gif" -> MediaType.IMAGE_GIF;
+            default -> MediaType.APPLICATION_OCTET_STREAM;
+        };
     }
 
     private static final String UUID_SEPARATOR = "__uuid__";
 
     private String generateUniqueFileName(String originalFileName) {
         if (originalFileName == null || originalFileName.isBlank()) {
-            throw new IllegalArgumentException("파일명이 유효하지 않습니다.");
+            throw new CustomException(ErrorValue.FILE_NAME_INVALID);
         }
 
         String extension = "";
@@ -155,28 +227,10 @@ public class GCSUtil {
         return baseName + UUID_SEPARATOR + uuid + extension;
     }
 
-    private String extractOriginalFileName(String savedFileName) {
-        if (savedFileName == null || !savedFileName.contains(UUID_SEPARATOR)) {
-            return savedFileName;
-        }
-
-        int separatorIndex = savedFileName.indexOf(UUID_SEPARATOR);
-        String baseName = savedFileName.substring(0, separatorIndex);
-
-        String extension = "";
-        int lastDotIndex = savedFileName.lastIndexOf('.');
-        if (lastDotIndex > separatorIndex) {
-            extension = savedFileName.substring(lastDotIndex);
-        }
-
-        return baseName + extension;
-    }
-
     private String extractObjectName(String fileUrl) {
-        String prefix = "https://storage.googleapis.com/" + bucketName + "/";
-        if (!fileUrl.startsWith(prefix)) {
-            throw new IllegalArgumentException("올바르지 않은 GCS URL: " + fileUrl);
+        if (!fileUrl.startsWith(gcsUrlPrefix)) {
+            throw new CustomException(ErrorValue.GCS_URL_INVALID);
         }
-        return fileUrl.substring(prefix.length());
+        return fileUrl.substring(gcsUrlPrefix.length());
     }
 }

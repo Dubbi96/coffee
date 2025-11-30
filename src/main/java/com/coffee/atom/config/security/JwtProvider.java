@@ -2,6 +2,7 @@ package com.coffee.atom.config.security;
 
 import com.coffee.atom.config.CodeValue;
 import com.coffee.atom.config.error.CustomException;
+import com.coffee.atom.config.error.ErrorValue;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -59,10 +60,10 @@ public class JwtProvider {
                     .parseClaimsJws(token)
                     .getBody();
         } catch (ExpiredJwtException e) {
-            throw new CustomException("토큰이 만료되었습니다.", CodeValue.NO_TOKEN);
+            throw new CustomException(ErrorValue.TOKEN_EXPIRED, CodeValue.NO_TOKEN);
         } catch (JwtException e) {
             log.error("e : ",e);
-            throw new CustomException("JWT 토큰 파싱 중 에러가 발생했습니다.");
+            throw new CustomException(ErrorValue.JWT_PARSING_ERROR);
         }
     }
 

@@ -1,6 +1,5 @@
 package com.coffee.atom.controller;
 
-import com.coffee.atom.common.ApiResponse;
 import com.coffee.atom.config.security.LoginAppUser;
 import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.dto.area.AreaDto;
@@ -39,8 +38,8 @@ public class AreaController {
         summary = "지역 및 섹션 조회",
         description = "<b>지역 및 섹션 조회</b><br>" +
                       "정렬 기준 1: 지역은 areaName의 순서로 정렬<br>" +
-                      "정렬 기준 2: 섹션또한 sectionName의 순서로 정렬"+
-                      "타 권한의 AppUser로 해당 서비스 호출 시 UNAUTHORIZED 메세지 반환"
+                      "정렬 기준 2: 섹션또한 sectionName의 순서로 정렬<br>" +
+                      "모든 사용자가 조회 가능하며, 승인된 섹션만 조회됨"
     )
     public List<AreaSectionResponseDto> getAreasWithSections(
     ) {
@@ -50,9 +49,10 @@ public class AreaController {
     @GetMapping()
     @Operation(
         summary = "지역만 조회",
-        description = "<b>지역 조회</b><br>" +
-                      "정렬 기준 1: 지역은 areaName의 순서로 정렬<br>"+
-                      "타 권한의 AppUser로 해당 서비스 호출 시 UNAUTHORIZED 메세지 반환"
+        description = "<b>역할(Role)에 따라 조회되는 지역 목록</b><br>" +
+                      "<b>ADMIN</b>: 모든 지역 목록 조회<br>" +
+                      "<b>VICE_ADMIN_HEAD_OFFICER / VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER</b>: 본인이 배정된 지역만 조회<br>" +
+                      "정렬 기준: 지역은 areaName의 순서로 정렬"
     )
     public List<AreaResponseDto> getArea(
             @LoginAppUser AppUser appUser
@@ -75,8 +75,9 @@ public class AreaController {
     @GetMapping("/my")
     @Operation(
         summary = "내 지역 조회 2️⃣ 부 관리자",
-        description = "<b>내 지역 조회</b><br>" +
-                      "내 지역을 조회하며 해당 API는 부 관리자 (한국지사, 농림부) 두 권한만 사용 가능"
+        description = "<b>부 관리자의 배정된 지역 조회</b><br>" +
+                      "VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER 권한만 사용 가능<br>" +
+                      "본인이 배정된 지역(Area) 정보를 반환하며, 배정되지 않은 경우 예외 발생"
     )
     public AreaResponseDto getMyAreaId(
             @LoginAppUser AppUser appUser

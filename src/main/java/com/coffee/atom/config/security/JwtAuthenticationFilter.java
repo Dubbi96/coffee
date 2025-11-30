@@ -57,12 +57,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (claims.get("appUserId") != null) {
             return authenticateAppUser(Long.parseLong(claims.get("appUserId").toString()));
         }
-        throw new IllegalArgumentException("유효하지 않은 토큰 : 인증된 사용자 타입이 아닙니다.");
+        throw new CustomException(ErrorValue.UNAUTHORIZED);
     }
 
     private AuthenticationToken authenticateAppUser(Long appUserId) {
         AppUser appUser = appUserRepository.findById(appUserId)
-                .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
+                .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND));
         TokenPrincipal principal = new TokenPrincipal(appUser);
         SimpleGrantedAuthority role = new SimpleGrantedAuthority(
                 appUser.getRole() != null ? appUser.getRole().name() : "ROLE_UNKNOWN"

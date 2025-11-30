@@ -1,6 +1,7 @@
 package com.coffee.atom.controller;
 
-import com.coffee.atom.common.ApiResponse;
+import com.coffee.atom.config.security.LoginAppUser;
+import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.dto.area.SectionDto;
 import com.coffee.atom.dto.section.SectionRequestDto;
 import com.coffee.atom.service.SectionService;
@@ -18,21 +19,26 @@ public class SectionController {
     @Operation(
         summary = "섹션 생성 1️⃣ 총 관리자",
         description = "<b>섹션 명, 섹션 위도, 경도로 신규 섹션 생성</b><br>" +
-                      "신규 섹션 생성은 ADMIN 권한만 사용 가능<br>" +
-                      "타 권한의 AppUser로 해당 서비스 호출 시 UNAUTHORIZED 메세지 반환"
+                      "<b>⚠️ 정책 변경사항:</b><br>" +
+                      "- 섹션 생성은 ADMIN 권한만 사용 가능 (정책 1.7)<br>" +
+                      "- VICE_ADMIN은 섹션 생성/삭제/수정을 위한 Approval 요청만 가능<br>" +
+                      "- 타 권한의 AppUser로 해당 서비스 호출 시 UNAUTHORIZED 메세지 반환"
     )
     public void saveSection(
-            @RequestBody SectionRequestDto sectionRequestDto
+            @RequestBody SectionRequestDto sectionRequestDto,
+            @LoginAppUser AppUser appUser
     ) {
-        sectionService.createSection(sectionRequestDto);
+        sectionService.createSection(appUser, sectionRequestDto);
     }
 
     @DeleteMapping("/{sectionId}")
     @Operation(
         summary = "섹션 삭제 1️⃣ 총 관리자",
-        description = "<b>섹션 명, 섹션 위도, 경도로 신규 섹션 생성</b><br>" +
-                      "신규 섹션 생성은 ADMIN 권한만 사용 가능<br>" +
-                      "타 권한의 AppUser로 해당 서비스 호출 시 UNAUTHORIZED 메세지 반환"
+        description = "<b>지정한 섹션 ID에 해당하는 섹션을 즉시 삭제</b><br>" +
+                      "<b>⚠️ 정책 변경사항:</b><br>" +
+                      "- 섹션 삭제는 ADMIN 권한만 사용 가능<br>" +
+                      "- VICE_ADMIN은 섹션 삭제를 위한 Approval 요청만 가능<br>" +
+                      "- 타 권한의 AppUser로 해당 서비스 호출 시 UNAUTHORIZED 메세지 반환"
     )
     public void deleteSection(
             @PathVariable("sectionId") Long sectionId

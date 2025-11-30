@@ -5,7 +5,6 @@ public enum EntityType {
     PURCHASE,
     VILLAGE_HEAD_DETAIL,
     FARMER,
-    TREES_TRANSACTION,
     APP_USER,
     SECTION
 }

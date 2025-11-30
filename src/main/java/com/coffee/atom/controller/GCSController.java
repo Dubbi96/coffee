@@ -3,7 +3,8 @@ package com.coffee.atom.controller;
 import com.coffee.atom.common.IgnoreResponseBinding;
 import com.coffee.atom.config.security.LoginAppUser;
 import com.coffee.atom.domain.appuser.AppUser;
-import com.coffee.atom.domain.file.FileEventLogRepository;
+import com.coffee.atom.config.error.CustomException;
+import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.domain.file.FileEventLogType;
 import com.coffee.atom.dto.file.FileDeleteRequestDto;
 import com.coffee.atom.service.file.FileEventLogService;
@@ -44,12 +45,12 @@ public class GCSController {
     public String uploadFileToGCS(@LoginAppUser AppUser appUser,
                                   @RequestParam(value = "directory", required = false) String directory,
                                   @RequestPart(value = "file") MultipartFile file) {
-        if (isNull(file)) throw new IllegalArgumentException("file is empty");
+        if (isNull(file)) throw new CustomException(ErrorValue.FILE_EMPTY);
         try {
             return gcsUtil.uploadFileToGCS(directory, file, appUser);
         } catch (IOException e) {
             fileEventLogService.saveLog(appUser, FileEventLogType.UPLOAD, file, null, false);
-            throw new IllegalStateException("파일 업로드 중 에러가 발생했습니다.");
+            throw new CustomException(ErrorValue.UNKNOWN_ERROR);
         }
     }
 
@@ -64,12 +65,12 @@ public class GCSController {
     public List<String> uploadFilesToGCS(@LoginAppUser AppUser appUser,
                                          @RequestParam(value = "directory", required = false) String directory,
                                          @RequestPart(value = "files") List<MultipartFile> files) {
-        if (files.isEmpty()) throw new IllegalArgumentException("files are empty");
+        if (files.isEmpty()) throw new CustomException(ErrorValue.FILES_EMPTY);
         try {
             return gcsUtil.uploadFilesToGCS(directory, files, appUser);
         } catch (IOException e) {
             fileEventLogService.saveLogs(appUser, FileEventLogType.UPLOAD, files, Collections.emptyList(), false);
-            throw new IllegalStateException("파일 업로드 중 에러가 발생했습니다.");
+            throw new CustomException(ErrorValue.UNKNOWN_ERROR);
         }
     }
 

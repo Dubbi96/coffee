@@ -4,6 +4,5 @@ public enum ServiceType {
     VILLAGE_HEAD,
     FARMER,
     PURCHASE,
-    SECTION,
-    TREES_TRANSACTION
+    SECTION
 }

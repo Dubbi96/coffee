@@ -25,6 +25,10 @@ public class Purchase {
     @JoinColumn(name = "manager_id", nullable = false)
     private AppUser manager; // 담당자 (부 관리자)
 
+    @ManyToOne
+    @JoinColumn(name = "village_head_id", nullable = false)
+    private AppUser villageHead; // 면장 (1:1 관계)
+
     @Column(name = "purchase_date", nullable = false)
     private LocalDate purchaseDate;
 

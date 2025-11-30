@@ -50,4 +50,19 @@ public class GlobalExceptionHandler {
         String message = "삭제할 수 없습니다. 해당 항목이 다른 데이터에서 참조되고 있습니다.";
         return makeErrorResponse(message, CodeValue.DATA_INTEGRITY_VIOLATION.getValue(), HttpStatus.BAD_REQUEST);
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse> handleIllegalArgumentException(IllegalArgumentException e) {
+        log.warn("잘못된 인자 예외 발생: {}", e.getMessage(), e);
+        // ErrorValue 메시지인 경우 그대로 사용, 아니면 일반 메시지로 처리
+        String message = e.getMessage();
+        return makeErrorResponse(message, CodeValue.BAD_REQUEST.getValue(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse> handleIllegalStateException(IllegalStateException e) {
+        log.warn("잘못된 상태 예외 발생: {}", e.getMessage(), e);
+        String message = e.getMessage();
+        return makeErrorResponse(message, CodeValue.BAD_REQUEST.getValue(), HttpStatus.BAD_REQUEST);
+    }
 }

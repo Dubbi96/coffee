@@ -35,7 +35,6 @@ public class ApprovalService {
     private final RequestedInstanceRepository requestedInstanceRepository;
     private final AppUserRepository appUserRepository;
     private final ObjectMapper objectMapper;
-    private final TreesTransactionRepository treesTransactionRepository;
     private final SectionRepository sectionRepository;
     private final FarmerRepository farmerRepository;
     private final PurchaseRepository purchaseRepository;
@@ -47,7 +46,7 @@ public class ApprovalService {
                                 Method method,
                                 ServiceType serviceType,
                                 List<EntityReference> affectedEntities) throws JsonProcessingException {
-        AppUser approver = appUserRepository.findById(approverId).orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND.getMessage()));
+        AppUser approver = appUserRepository.findById(approverId).orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND));
         // 1. 요청 내용을 JSON으로 직렬화
         String requestedJson = objectMapper.writeValueAsString(requestDto);
 
@@ -83,18 +82,30 @@ public class ApprovalService {
         Pageable pageable,
         AppUser appUser
     ) {
+        // 면장은 Approval을 조회할 수 없음
+        if (appUser.getRole() == Role.VILLAGE_HEAD) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+
         Specification<Approval> spec = Specification.where(null);
 
         Role role = appUser.getRole();
 
         switch (role) {
             case ADMIN -> {
-                spec = spec.and((root, query, cb) -> cb.equal(root.get("approver").get("id"), appUser.getId()));
+                // ADMIN은 VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER의 요청만 승인
+                List<Role> viceAdminRoles = List.of(Role.VICE_ADMIN_HEAD_OFFICER, Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER);
+                spec = spec.and((root, query, cb) -> 
+                    cb.and(
+                        cb.equal(root.get("approver").get("id"), appUser.getId()),
+                        root.get("requester").get("role").in(viceAdminRoles)
+                    )
+                );
             }
             case VICE_ADMIN_HEAD_OFFICER -> {
                 // 나 또는 같은 Area의 농림부 부관리자 요청만
                 if (appUser.getArea() == null) {
-                    throw new CustomException(ErrorValue.AREA_NOT_FOUND.getMessage());
+                    throw new CustomException(ErrorValue.AREA_NOT_FOUND);
                 }
                 Long areaId = appUser.getArea().getId();
                 List<Role> viceAdminRoles = List.of(Role.VICE_ADMIN_HEAD_OFFICER, Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER);
@@ -103,7 +114,7 @@ public class ApprovalService {
             }
             case VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ->
                     spec = spec.and((root, query, cb) -> cb.equal(root.get("requester"), appUser));
-            default -> throw new CustomException("해당 권한으로 요청 목록을 조회할 수 없습니다.");
+            default -> throw new CustomException(ErrorValue.ROLE_NOT_ALLOWED_APPROVAL_LIST);
         }
 
         // 공통 필터
@@ -127,8 +138,19 @@ public class ApprovalService {
     }
 
     @Transactional
-    public void processApproval(Long approvalId) {
-        Approval approval = approvalRepository.findById(approvalId).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+    public void processApproval(Long approvalId, AppUser approver) {
+        // 면장은 Approval을 승인할 수 없음
+        if (approver.getRole() == Role.VILLAGE_HEAD) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+
+        Approval approval = approvalRepository.findById(approvalId).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
+        
+        // 승인자가 맞는지 확인
+        if (!approval.getApprover().getId().equals(approver.getId())) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+
         switch (approval.getMethod()) {
             case CREATE -> handleCreateApproval(approval);
             case UPDATE -> handleUpdateApproval(approval);
@@ -149,27 +171,22 @@ public class ApprovalService {
             switch (type) {
                 case APP_USER -> {
                     AppUser entity = appUserRepository.findById(instanceId)
-                            .orElseThrow(() -> new CustomException("해당 AppUser가 존재하지 않습니다."));
+                            .orElseThrow(() -> new CustomException(ErrorValue.APP_USER_NOT_FOUND));
                     entity.approveInstance();
                 }
                 case FARMER -> {
                     Farmer entity = farmerRepository.findById(instanceId)
-                            .orElseThrow(() -> new CustomException("해당 Farmer가 존재하지 않습니다."));
+                            .orElseThrow(() -> new CustomException(ErrorValue.FARMER_NOT_FOUND));
                     entity.approveInstance();
                 }
                 case SECTION -> {
                     Section entity = sectionRepository.findById(instanceId)
-                            .orElseThrow(() -> new CustomException("해당 Section이 존재하지 않습니다."));
-                    entity.approveInstance();
-                }
-                case TREES_TRANSACTION -> {
-                    TreesTransaction entity = treesTransactionRepository.findById(instanceId)
-                            .orElseThrow(() -> new CustomException("해당 TreesTransaction이 존재하지 않습니다."));
+                            .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
                     entity.approveInstance();
                 }
                 case PURCHASE -> {
                     Purchase entity = purchaseRepository.findById(instanceId)
-                            .orElseThrow(() -> new CustomException("해당 Purchase가 존재하지 않습니다."));
+                            .orElseThrow(() -> new CustomException(ErrorValue.PURCHASE_NOT_FOUND));
                     entity.approveInstance();
                 }
                 default -> throw new UnsupportedOperationException("지원되지 않는 엔티티입니다: " + type);
@@ -189,7 +206,7 @@ public class ApprovalService {
 
                 if (type == EntityType.APP_USER) {
                     AppUser appUser = appUserRepository.findById(id)
-                            .orElseThrow(() -> new CustomException("해당 AppUser가 존재하지 않습니다."));
+                            .orElseThrow(() -> new CustomException(ErrorValue.APP_USER_NOT_FOUND));
 
                     if (appUser.getRole() == Role.VILLAGE_HEAD) {
                         // 계좌정보 및 은행명 업데이트
@@ -204,10 +221,10 @@ public class ApprovalService {
                         // section 변경
                         if (jsonNode.has("sectionId")) {
                             Section section = sectionRepository.findById(jsonNode.get("sectionId").asLong())
-                                    .orElseThrow(() -> new CustomException("Section이 존재하지 않습니다."));
-                            if (!section.getIsApproved()) {
-                                throw new CustomException("승인되지 않은 Section입니다.");
-                            }
+                                    .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
+                                if (!section.getIsApproved()) {
+                                    throw new CustomException(ErrorValue.SECTION_NOT_APPROVED);
+                                }
                             appUser.updateSection(section);
                         }
 
@@ -228,7 +245,7 @@ public class ApprovalService {
 
                 if (type == EntityType.FARMER) {
                     Farmer farmer = farmerRepository.findById(id)
-                            .orElseThrow(() -> new CustomException("해당 Farmer가 존재하지 않습니다."));
+                            .orElseThrow(() -> new CustomException(ErrorValue.FARMER_NOT_FOUND));
 
                     // 이름 업데이트
                     if (jsonNode.has("name")) {
@@ -244,10 +261,10 @@ public class ApprovalService {
                     if (jsonNode.has("villageHeadId")) {
                         Long villageHeadId = jsonNode.get("villageHeadId").asLong();
                         AppUser villageHead = appUserRepository.findById(villageHeadId)
-                                .orElseThrow(() -> new CustomException("면장이 존재하지 않습니다."));
+                                .orElseThrow(() -> new CustomException(ErrorValue.VILLAGE_HEAD_NOT_FOUND));
                         if (villageHead.getRole() != Role.VILLAGE_HEAD || 
                             villageHead.getIsApproved() == null || !villageHead.getIsApproved()) {
-                            throw new CustomException("승인되지 않은 면장입니다.");
+                            throw new CustomException(ErrorValue.VILLAGE_HEAD_NOT_APPROVED);
                         }
                         farmer.updateVillageHead(villageHead);
                     }
@@ -259,7 +276,7 @@ public class ApprovalService {
                 // (추후 FARMER 등 다른 EntityType도 추가 가능)
 
             } catch (JsonProcessingException e) {
-                throw new CustomException("요청 데이터 파싱 실패");
+                throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
             }
         }
     }
@@ -272,23 +289,19 @@ public class ApprovalService {
 
             switch (type) {
                 case APP_USER -> {
-                    appUserRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                    appUserRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
                     appUserRepository.deleteById(id);
                 }
                 case FARMER ->{
-                    farmerRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                    farmerRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
                     farmerRepository.deleteById(id);
                 }
                 case SECTION ->{
-                    sectionRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                    sectionRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
                     sectionRepository.deleteById(id);
                 }
-                case TREES_TRANSACTION ->{
-                    treesTransactionRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
-                    treesTransactionRepository.deleteById(id);
-                }
                 case PURCHASE -> {
-                    purchaseRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                    purchaseRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
                     purchaseRepository.deleteById(id);
                 }
                 default -> throw new UnsupportedOperationException("삭제 불가 엔티티입니다: " + type);
@@ -297,8 +310,18 @@ public class ApprovalService {
     }
 
     @Transactional
-    public void rejectApproval(Long approvalId, String rejectedReason) {
-        Approval approval = approvalRepository.findById(approvalId).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+    public void rejectApproval(Long approvalId, String rejectedReason, AppUser approver) {
+        // 면장은 Approval을 거절할 수 없음
+        if (approver.getRole() == Role.VILLAGE_HEAD) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+
+        Approval approval = approvalRepository.findById(approvalId).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
+
+        // 승인자가 맞는지 확인
+        if (!approval.getApprover().getId().equals(approver.getId())) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
 
         switch (approval.getMethod()) {
             case CREATE -> rejectCreateApproval(approval);
@@ -318,7 +341,6 @@ public class ApprovalService {
             case APP_USER -> 2;
             case SECTION -> 3;
             case PURCHASE -> 4;
-            case TREES_TRANSACTION -> 5;
             default -> 99;
         };
     }
@@ -340,7 +362,6 @@ public class ApprovalService {
                 case APP_USER -> appUserRepository.deleteById(id);
                 case FARMER -> farmerRepository.deleteById(id);
                 case SECTION -> sectionRepository.deleteById(id);
-                case TREES_TRANSACTION -> treesTransactionRepository.deleteById(id);
                 case PURCHASE -> purchaseRepository.deleteById(id);
                 default -> throw new UnsupportedOperationException("삭제 불가 엔티티입니다: " + type);
             }
@@ -359,8 +380,6 @@ public class ApprovalService {
                     .ifPresent(Farmer::approveInstance);
                 case SECTION -> sectionRepository.findById(id)
                     .ifPresent(Section::approveInstance);
-                case TREES_TRANSACTION -> treesTransactionRepository.findById(id)
-                    .ifPresent(TreesTransaction::approveInstance);
                 case PURCHASE -> purchaseRepository.findById(id)
                         .ifPresent(Purchase::approveInstance);
                 default -> throw new UnsupportedOperationException("복구 불가 엔티티입니다: " + type);
@@ -370,7 +389,7 @@ public class ApprovalService {
 
     @Transactional(readOnly = true)
     public ApprovalDetailResponse getApprovalDetail(Long approvalId) {
-        Approval approval = approvalRepository.findById(approvalId).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+        Approval approval = approvalRepository.findById(approvalId).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
         ServiceType type = approval.getServiceType();
         String json = approval.getRequestedData();
         Status status = approval.getStatus();
@@ -385,7 +404,6 @@ public class ApprovalService {
                 case SECTION -> fromJson(json, SectionDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName, createdAt);
                 case PURCHASE -> fromJson(json, PurchaseDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName, createdAt);
                 case VILLAGE_HEAD -> fromJson(json, VillageHeadDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName, createdAt);
-                case TREES_TRANSACTION -> fromJson(json, TreesTransactionDetailResponseDto.class, type, status, rejectedReason, method, requesterId, requesterName, createdAt);
             };
             if (dto instanceof VillageHeadDetailResponseDto v) {
                 enrichVillageHeadDetail(v);
@@ -393,34 +411,11 @@ public class ApprovalService {
             if (dto instanceof FarmerDetailResponseDto v) {
                 enrichFarmerDetail(v);
             }
-            if (dto instanceof TreesTransactionDetailResponseDto v) {
-                enrichTreeTransactionDetail(v);
-            }
             return dto;
         } catch (JsonProcessingException e) {
             log.error("❌ JSON 파싱 실패! 원본: {}", json);
-            throw new CustomException("요청 데이터를 파싱할 수 없습니다.");
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
         }
-    }
-
-    private void enrichTreeTransactionDetail(TreesTransactionDetailResponseDto dto) {
-        Long farmerId = dto.getFarmerId();
-        if (farmerId == null) return;
-
-        farmerRepository.findById(farmerId).ifPresent(farmer -> {
-            dto.setFarmerName(farmer.getName());
-
-            AppUser villageHead = farmer.getVillageHead();
-            if (villageHead != null && villageHead.getSection() != null) {
-                Section section = villageHead.getSection();
-                dto.setSectionName(section.getSectionName());
-
-                Area area = section.getArea();
-                if (area != null) {
-                    dto.setAreaName(area.getAreaName());
-                }
-            }
-        });
     }
 
     private void enrichVillageHeadDetail(VillageHeadDetailResponseDto dto) {
@@ -459,11 +454,11 @@ public class ApprovalService {
     public void deleteApproval(Long approvalId, AppUser appUser) {
         // 1. Approval 엔티티 조회
         Approval approval = approvalRepository.findById(approvalId)
-            .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+            .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
 
         // 2. 요청자 검증
         if (!approval.getRequester().getId().equals(appUser.getId())) {
-            throw new CustomException(ErrorValue.UNAUTHORIZED_SERVICE.getMessage());
+            throw new CustomException(ErrorValue.UNAUTHORIZED_SERVICE);
         }
 
         // 3. 삭제

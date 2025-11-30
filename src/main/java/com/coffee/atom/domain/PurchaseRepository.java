@@ -8,6 +8,9 @@ public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
     // ADMIN용: 전체 조회
     List<Purchase> findByIsApprovedTrueOrderByPurchaseDateDesc();
 
-    // VICE_ADMIN_HEAD_OFFICER용: 본인 manager일 경우만
+    // VICE_ADMIN용: 본인 manager일 경우만
     List<Purchase> findByIsApprovedTrueAndManager_IdOrderByPurchaseDateDesc(Long managerId);
+
+    // VILLAGE_HEAD용: 본인과 1:1 관계인 Purchase만 조회
+    List<Purchase> findByIsApprovedTrueAndVillageHead_IdOrderByPurchaseDateDesc(Long villageHeadId);
 }

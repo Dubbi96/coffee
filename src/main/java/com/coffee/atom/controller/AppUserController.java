@@ -28,7 +28,18 @@ public class AppUserController {
     }
 
     @PostMapping(value = "/sign-up", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "신규 계정 생성 1️⃣ 총 관리자", description = "<b>총 관리자만 가능</b><br>부 관리자 / 면장 생성 용도")
+    @Operation(
+        summary = "신규 계정 생성 1️⃣ 총 관리자", 
+        description = "<b>총 관리자만 계정 생성 가능</b><br>" +
+                      "생성 가능한 역할: VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER, VILLAGE_HEAD<br>" +
+                      "<b>⚠️ ADMIN 역할은 생성 불가 (정책 1.1)</b><br>" +
+                      "<b>VICE_ADMIN 생성 시 정책:</b><br>" +
+                      "- 한 지역(Area)에는 각 권한(VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER)당 한 명씩만 할당 가능 (정책 1.5)<br>" +
+                      "- areaId 필수 입력<br>" +
+                      "<b>VILLAGE_HEAD 생성 시:</b><br>" +
+                      "- sectionId 필수 입력<br>" +
+                      "- 은행 정보(bankName, accountInfo) 선택 사항"
+    )
     public Long signUp(
             @RequestPart(value = "idCardFile", required = false) MultipartFile idCardFile,
             @RequestPart(value = "identificationPhotoFile", required = false) MultipartFile identificationPhotoFile,
@@ -98,7 +109,15 @@ public class AppUserController {
     }
 
     @PatchMapping(value = "/vice-admin/{viceAdminId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "부 관리자 정보 수정 1️⃣ 총 관리자", description = "<b>부 관리자 정보 수정</b><br>총 관리자만 사용 가능<br>수정 가능 정보: 이름, 유저아이디, 관리지역, idCard 이미지")
+    @Operation(
+        summary = "부 관리자 정보 수정 1️⃣ 총 관리자", 
+        description = "<b>부 관리자 정보 수정</b><br>" +
+                      "총 관리자만 사용 가능<br>" +
+                      "수정 가능 정보: 이름, 유저아이디, 관리지역, idCard 이미지<br>" +
+                      "<b>⚠️ 지역 변경 시 정책:</b><br>" +
+                      "- 새로운 지역에 이미 같은 역할의 부 관리자가 배정되어 있으면 예외 발생 (정책 1.6)<br>" +
+                      "- 기존 부 관리자를 다른 사람으로 대체 가능"
+    )
     public void updateViceAdmin(
             @PathVariable("viceAdminId") Long viceAdminId,
             @LoginAppUser AppUser appUser,

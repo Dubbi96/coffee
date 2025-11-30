@@ -12,6 +12,8 @@ public class PurchaseResponseDto {
     private Long id;
     private Long managerId;
     private String managerName;
+    private Long villageHeadId;
+    private String villageHeadName;
     private LocalDate purchaseDate;
     private Long quantity;
     private Long unitPrice;
@@ -25,6 +27,8 @@ public class PurchaseResponseDto {
                 .id(purchase.getId())
                 .managerId(purchase.getManager().getId())
                 .managerName(purchase.getManager().getUsername())
+                .villageHeadId(purchase.getVillageHead().getId())
+                .villageHeadName(purchase.getVillageHead().getUsername())
                 .purchaseDate(purchase.getPurchaseDate())
                 .quantity(purchase.getQuantity())
                 .unitPrice(purchase.getUnitPrice())

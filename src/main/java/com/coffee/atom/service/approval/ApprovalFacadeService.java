@@ -16,7 +16,6 @@ import com.coffee.atom.dto.approval.*;
 import com.coffee.atom.service.AppUserService;
 import com.coffee.atom.service.PurchaseService;
 import com.coffee.atom.service.SectionService;
-import com.coffee.atom.service.TreesTransactionService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,12 +29,10 @@ public class ApprovalFacadeService {
 
     private final AppUserService appUserService;
     private final ApprovalService approvalService;
-    private final TreesTransactionService treesTransactionService;
     private final PurchaseService purchaseService;
     private final SectionService sectionService;
     private final FarmerRepository farmerRepository;
     private final SectionRepository sectionRepository;
-    private final TreesTransactionRepository treesTransactionRepository;
     private final PurchaseRepository purchaseRepository;
     private final AppUserRepository appUserRepository;
 
@@ -76,25 +73,6 @@ public class ApprovalFacadeService {
                 ServiceType.FARMER,
                 List.of(
                     new EntityReference(EntityType.FARMER, dto.getId())
-                )
-        );
-    }
-
-    @Transactional
-    public void processTreesTransactionCreation(
-            AppUser requester,
-            Long approverId,
-            ApprovalTreesTransactionRequestDto dto
-    ) throws JsonProcessingException{
-        dto = treesTransactionService.requestApprovalToCreateTreesTransaction(dto);
-        approvalService.requestApproval(
-                requester,
-                approverId,
-                dto,
-                Method.CREATE,
-                ServiceType.TREES_TRANSACTION,
-                List.of(
-                    new EntityReference(EntityType.TREES_TRANSACTION, dto.getId())
                 )
         );
     }
@@ -181,7 +159,7 @@ public class ApprovalFacadeService {
     ) throws JsonProcessingException {
         // 삭제 대상 농부 존재 여부 확인
         Farmer farmer = farmerRepository.findById(farmerId)
-                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
 
         ApprovalFarmerRequestDto deleteDto = new ApprovalFarmerRequestDto(
             null, // 삭제 요청에는 identificationPhoto 업로드 없음
@@ -209,10 +187,10 @@ public class ApprovalFacadeService {
             Long villageHeadId
     ) throws JsonProcessingException {
         AppUser villageHead = appUserRepository.findById(villageHeadId)
-                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
 
         if (villageHead.getRole() != Role.VILLAGE_HEAD) {
-            throw new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage());
+            throw new CustomException(ErrorValue.SUBJECT_NOT_FOUND);
         }
 
         // 삭제 요청용 DTO 생성 (파일은 null, URL만 포함)
@@ -249,7 +227,7 @@ public class ApprovalFacadeService {
             Long sectionId
     ) throws JsonProcessingException {
         Section section = sectionRepository.findById(sectionId)
-                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
 
         ApprovalSectionRequestDto dto = new ApprovalSectionRequestDto();
         dto.setId(section.getId());
@@ -269,39 +247,13 @@ public class ApprovalFacadeService {
     }
 
     @Transactional
-    public void processTreesTransactionDelete(
-            AppUser requester,
-            Long approverId,
-            Long treesTransactionId
-    ) throws JsonProcessingException {
-        TreesTransaction transaction = treesTransactionRepository.findById(treesTransactionId)
-                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
-
-        ApprovalTreesTransactionRequestDto dto = new ApprovalTreesTransactionRequestDto();
-        dto.setId(transaction.getId());
-        dto.setSpecies(transaction.getSpecies());
-        dto.setFarmerId(transaction.getFarmer().getId());
-        dto.setQuantity(transaction.getQuantity());
-        dto.setReceivedDate(transaction.getReceivedDate());
-
-        approvalService.requestApproval(
-                requester,
-                approverId,
-                dto,
-                Method.DELETE,
-                ServiceType.TREES_TRANSACTION,
-                List.of(new EntityReference(EntityType.TREES_TRANSACTION, dto.getId()))
-        );
-    }
-
-    @Transactional
     public void processPurchaseDelete(
             AppUser requester,
             Long approverId,
             Long purchaseId
     ) throws JsonProcessingException {
         Purchase purchase = purchaseRepository.findById(purchaseId)
-                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
 
         ApprovalPurchaseRequestDto dto = new ApprovalPurchaseRequestDto();
         dto.setId(purchase.getId());

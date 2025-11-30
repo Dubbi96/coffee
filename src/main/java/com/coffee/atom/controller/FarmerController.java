@@ -31,14 +31,15 @@ public class FarmerController {
 
     @GetMapping("/{farmerId}")
     @Operation(
-        summary = "단일 농부의 나무 수령 이력 조회",
+        summary = "단일 농부 정보 조회",
         description = "<b>farmerId에 해당하는 농부의 정보를 조회</b><br>" +
-                      "해당 농부가 받은 나무 품종, 수령일자, 수량 정보를 포함한 이력을 반환<br>" +
-                      "승인된(transaction.isApproved = true) 데이터만 조회 <br>" +
-                      "응답에는 농부 이름과 해당 섹션(section) 이름도 포함"
+                      "응답에는 농부 이름과 해당 섹션(section) 이름, 신분증 사진 URL이 포함<br>" +
+                      "<b>⚠️ 변경사항:</b><br>" +
+                      "- TreesTransaction 관련 기능 제거됨<br>" +
+                      "- 나무 수령 이력 조회 기능은 더 이상 제공되지 않음"
     )
     public FarmerResponseDto getFarmerDetail(@PathVariable("farmerId") Long farmerId){
-        return farmerService.getFarmerTreeTransactions(farmerId);
+        return farmerService.getFarmerDetail(farmerId);
     }
 
     //TODO: 1. 나무 수령 목록 조회 (Admin, 부 관리자, 면장) 각각 다른 권한으로 조회

@@ -1,5 +1,7 @@
 package com.coffee.atom.controller;
 
+import com.coffee.atom.config.error.CustomException;
+import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.config.security.LoginAppUser;
 import com.coffee.atom.domain.approval.ServiceType;
 import com.coffee.atom.domain.approval.Status;
@@ -34,7 +36,11 @@ public class ApprovalController {
         description = "<b>승인 요청 목록을 상태 및 서비스 타입으로 필터링</b><br>" +
                 "다중 선택 필터 및 페이지네이션 지원<br>" +
                 "예: ?statuses=PENDING&statuses=APPROVED&serviceTypes=PURCHASE&page=0&size=10<br>" +
-                "ADMIN 계정으로 서비스 호출 할 경우, 본인이 승인자로 지정 된 요청만 가져옴"
+                "<b>⚠️ VILLAGE_HEAD는 조회 불가 (VIEWER 권한만 보유)</b><br>" +
+                "<b>역할별 조회 범위:</b><br>" +
+                "- <b>ADMIN</b>: 본인이 승인자로 지정된 요청 중, VICE_ADMIN_HEAD_OFFICER 또는 VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER가 요청한 것만 조회 (정책 1.1)<br>" +
+                "- <b>VICE_ADMIN_HEAD_OFFICER</b>: 본인 또는 같은 Area의 VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER가 요청한 것만 조회<br>" +
+                "- <b>VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER</b>: 본인이 요청한 것만 조회"
     )
     public Page<ApprovalResponseDto> getApprovals(
             @RequestParam(value = "statuses", required = false) List<Status> statuses,
@@ -55,25 +61,37 @@ public class ApprovalController {
     @Operation(
         summary = "요청 승인 처리 1️⃣ 총 관리자",
         description = "<b>approvalId를 갖는 요청 승인 처리</b><br>" +
-                "요청이 없을 경우 적용되지 않음<br>" +
-                "현재 update는 아직 안됨(현재 UPDATE 요청 서비스 없음)<br>"
+                "승인 가능한 역할: ADMIN, VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER<br>" +
+                "<b>⚠️ VILLAGE_HEAD는 승인 불가 (VIEWER 권한만 보유)</b><br>" +
+                "본인이 승인자로 지정된 요청만 승인 가능<br>" +
+                "승인 시 요청 유형(CREATE/UPDATE/DELETE)에 따라 해당 인스턴스가 실제로 생성/수정/삭제됨"
     )
-    public void approveApproval(@PathVariable("approvalId") Long approvalId) {
-        approvalService.processApproval(approvalId);
+    public void approveApproval(
+            @PathVariable("approvalId") Long approvalId,
+            @LoginAppUser AppUser appUser
+    ) {
+        approvalService.processApproval(approvalId, appUser);
     }
 
     @PatchMapping("/reject/{approvalId}")
     @Operation(
         summary = "요청 거절 처리 1️⃣ 총 관리자",
         description = "<b>approvalId를 갖는 요청 거절 처리</b><br>" +
-                "요청이 없을 경우 적용되지 않음<br>" +
-                "거절 사유를 입력해야하며, <br>" +
-                "**삭제** 요청에 대한 거절 처리의 경우 해당 인스턴스가 다시 목록에서 조회됨<br>" +
-                "**수정** 요청의 경우 DB상 변동 없음<br>" +
-                "**생성** 요청의 경우 템플릿 남기지 않고 DB에 생성 대기 중인 인스턴스 삭제"
+                "거절 가능한 역할: ADMIN, VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER<br>" +
+                "<b>⚠️ VILLAGE_HEAD는 거절 불가 (VIEWER 권한만 보유)</b><br>" +
+                "본인이 승인자로 지정된 요청만 거절 가능<br>" +
+                "거절 사유(rejectedReason) 필수 입력<br>" +
+                "<b>거절 처리 동작:</b><br>" +
+                "- <b>CREATE</b> 요청: 생성 대기 중인 인스턴스 삭제<br>" +
+                "- <b>UPDATE</b> 요청: DB 변경 없음<br>" +
+                "- <b>DELETE</b> 요청: 삭제 대기 중이던 인스턴스 복구 (isApproved = true로 변경)"
     )
-    public void approveApproval(@PathVariable("approvalId") Long approvalId, @RequestBody RejectApprovalRequestDto rejectApprovalRequestDto) {
-        approvalService.rejectApproval(approvalId, rejectApprovalRequestDto.getRejectedReason());
+    public void rejectApproval(
+            @PathVariable("approvalId") Long approvalId,
+            @RequestBody RejectApprovalRequestDto rejectApprovalRequestDto,
+            @LoginAppUser AppUser appUser
+    ) {
+        approvalService.rejectApproval(approvalId, rejectApprovalRequestDto.getRejectedReason(), appUser);
     }
 
     @GetMapping("/{approvalId}")
@@ -92,7 +110,11 @@ public class ApprovalController {
     @Operation(
         summary = "면장 생성 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
         description = "<b>면장 계정 생성을 위한 승인 요청</b><br>" +
-                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
+                      "요청 가능한 역할: ADMIN, VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER<br>" +
+                      "<b>⚠️ VICE_ADMIN의 경우 정책:</b><br>" +
+                      "- 본인이 배정된 Area 내의 Section에만 면장 배정 가능 (정책 2.1)<br>" +
+                      "- sectionId는 본인 Area 내의 Section이어야 함<br>" +
+                      "승인자는 approverId로 지정 (ADMIN ID)<br>" +
                       "파일은 Multipart 형식으로 전송되며, 일부 항목은 생략 가능"
     )
     public void requestApprovalToCreateVillageHead(
@@ -123,7 +145,7 @@ public class ApprovalController {
         try {
             approvalFacadeService.processVillageHeadCreation(appUser, approverId, approvalVillageHeadRequestDto);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
         }
     }
 
@@ -131,7 +153,11 @@ public class ApprovalController {
     @Operation(
         summary = "농부 생성 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자 ",
         description = "<b>농부 계정 생성을 위한 승인 요청 생성</b><br>" +
-                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
+                      "요청 가능한 역할: ADMIN, VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER<br>" +
+                      "<b>⚠️ VICE_ADMIN의 경우 정책:</b><br>" +
+                      "- villageHeadId는 본인이 배정된 Area 내의 면장이어야 함 (정책 2.5)<br>" +
+                      "- 본인 Area 외의 면장에게 농부를 배정할 수 없음<br>" +
+                      "승인자는 approverId로 지정 (ADMIN ID)<br>" +
                       "파일은 Multipart 형식으로 전송되며, 신분증 이미지는 선택 사항"
     )
     public void requestApprovalToCreateFarmer(
@@ -150,42 +176,21 @@ public class ApprovalController {
         try {
             approvalFacadeService.processFarmerCreation(appUser, approverId, approvalVillageHeadRequestDto);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
-        }
-    }
-
-    @PostMapping(value = "/trees-transaction")
-    @Operation(
-        summary = "나무 수령 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자 ",
-        description = "<b>나무 수령 정보를 위한 승인 요청 생성</b><br>" +
-                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>"
-    )
-    public void requestApprovalToCreateTreesTransaction(
-            @Parameter(description = "승인자 ADMIN ID")
-            @RequestParam("approverId") Long approverId,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "수령할 나무 정보<br>" +
-                            "- <b>quantity</b>: 수량<br>" +
-                            "- <b>receivedDate</b>: 수령 일자<br>" +
-                            "- <b>species</b>: 나무 종<br>" +
-                            "- <b>farmerId</b>: 수령 농부 ID",
-                    required = true
-            )
-            @RequestBody ApprovalTreesTransactionRequestDto approvalTreesTransactionRequestDto,
-            @LoginAppUser AppUser appUser
-    ){
-        try {
-            approvalFacadeService.processTreesTransactionCreation(appUser, approverId, approvalTreesTransactionRequestDto);
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
         }
     }
 
     @PostMapping(value = "/purchase")
     @Operation(
-        summary = "수매 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자 (한국지사) ",
+        summary = "수매 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
         description = "<b>수매 정보를 위한 승인 요청 생성</b><br>" +
-                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>"
+                      "요청 가능한 역할: ADMIN, VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER<br>" +
+                      "<b>⚠️ 정책 변경사항:</b><br>" +
+                      "- Purchase는 면장과 1:1 관계로 기록됨 (정책 2.2)<br>" +
+                      "- villageHeadId 필수 입력 (각 면장당 하나의 Purchase 기록)<br>" +
+                      "- VICE_ADMIN의 경우 본인 Area 내의 면장만 지정 가능<br>" +
+                      "승인자는 approverId로 지정 (ADMIN ID)<br>" +
+                      "승인 후 특정 기간 내 생성된 기록을 합산하여 조회 가능"
     )
     public void requestApprovalToCreatePurchase(
             @Parameter(description = "승인자 ADMIN ID")
@@ -207,7 +212,7 @@ public class ApprovalController {
         try {
             approvalFacadeService.processPurchaseCreation(appUser, approverId, approvalPurchaseRequestDto);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
         }
     }
 
@@ -215,7 +220,12 @@ public class ApprovalController {
     @Operation(
         summary = "섹션 생성 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자 ",
         description = "<b>섹션 생성 승인 요청 생성</b><br>" +
-                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>"
+                      "요청 가능한 역할: ADMIN, VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER<br>" +
+                      "<b>⚠️ 정책 변경사항:</b><br>" +
+                      "- 실제 섹션 생성은 ADMIN만 가능 (정책 1.7)<br>" +
+                      "- VICE_ADMIN은 섹션 생성/삭제/수정을 위한 Approval 요청만 가능 (정책 2.3)<br>" +
+                      "- VICE_ADMIN의 경우 areaId는 본인이 배정된 Area만 사용 가능 (입력해도 무시됨)<br>" +
+                      "승인자는 approverId로 지정 (ADMIN ID)"
     )
     public void requestApprovalToCreateSection(
             @Parameter(description = "승인자 ADMIN ID")
@@ -235,7 +245,7 @@ public class ApprovalController {
         try {
             approvalFacadeService.processSectionCreation(appUser, approverId, approvalSectionRequestDto);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
         }
     }
 
@@ -243,7 +253,11 @@ public class ApprovalController {
     @Operation(
         summary = "면장 수정 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
         description = "<b>면장 계정 수정을 위한 승인 요청</b><br>" +
-                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
+                      "요청 가능한 역할: ADMIN, VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER<br>" +
+                      "<b>⚠️ VICE_ADMIN의 경우 정책:</b><br>" +
+                      "- sectionId는 본인이 배정된 Area 내의 Section이어야 함 (정책 2.4)<br>" +
+                      "- 본인 Area 외의 Section에 면장을 배정할 수 없음<br>" +
+                      "승인자는 approverId로 지정 (ADMIN ID)<br>" +
                       "파일은 Multipart 형식으로 전송되며, 일부 항목은 생략 가능"
     )
     public void requestApprovalToUpdateVillageHead(
@@ -276,7 +290,7 @@ public class ApprovalController {
         try {
             approvalFacadeService.processVillageHeadUpdate(appUser, approverId, approvalVillageHeadRequestDto);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
         }
     }
 
@@ -318,7 +332,7 @@ public class ApprovalController {
         try {
             approvalFacadeService.processFarmerUpdate(appUser, approverId, dto);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
         }
     }
 
@@ -337,7 +351,7 @@ public class ApprovalController {
         try {
             approvalFacadeService.processFarmerDelete(appUser, approverId, farmerId);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
         }
     }
 
@@ -356,7 +370,7 @@ public class ApprovalController {
         try {
             approvalFacadeService.processVillageHeadDelete(appUser, approverId, villageHeadId);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
         }
     }
 
@@ -375,26 +389,7 @@ public class ApprovalController {
         try {
             approvalFacadeService.processSectionDelete(appUser, approverId, sectionId);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
-        }
-    }
-
-    @DeleteMapping("/trees-transaction/{transactionId}")
-    @Operation(
-        summary = "나무 수령 삭제 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
-        description = "<b>기존 나무 수령 이력 삭제를 위한 승인 요청</b><br>" +
-                      "요청자는 로그인된 사용자이며, 승인자는 approverId로 지정<br>" +
-                      "삭제 대상 transactionId는 필수"
-    )
-    public void requestApprovalToDeleteTreesTransaction(
-            @PathVariable("transactionId") Long transactionId,
-            @RequestParam("approverId") Long approverId,
-            @LoginAppUser AppUser appUser
-    ) {
-        try {
-            approvalFacadeService.processTreesTransactionDelete(appUser, approverId, transactionId);
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
         }
     }
 
@@ -413,7 +408,7 @@ public class ApprovalController {
         try {
             approvalFacadeService.processPurchaseDelete(appUser, approverId, purchaseId);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("요청 JsonProcessing 중 에러 발생하였습니다.");
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
         }
     }
 

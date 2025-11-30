@@ -2,7 +2,8 @@ package com.coffee.atom.service;
 
 import com.coffee.atom.config.error.CustomException;
 import com.coffee.atom.config.error.ErrorValue;
-import com.coffee.atom.domain.appuser.*;
+import com.coffee.atom.domain.appuser.AppUser;
+import com.coffee.atom.domain.appuser.Role;
 import com.coffee.atom.domain.area.Area;
 import com.coffee.atom.domain.area.AreaRepository;
 import com.coffee.atom.domain.area.Section;
@@ -16,17 +17,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @RequiredArgsConstructor
 public class AreaService {
     private final AreaRepository areaRepository;
-    private final ViceAdminDetailRepository viceAdminDetailRepository;
 
     @Transactional
     public void saveArea(AppUser appUser, AreaRequestDto areaRequestDto) {
-        if(!appUser.getRole().equals(Role.ADMIN)) throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
+        if(!appUser.getRole().equals(Role.ADMIN)) throw new CustomException(ErrorValue.UNAUTHORIZED);
         Area newArea = Area.builder()
                 .areaName(areaRequestDto.getAreaName())
                 .longitude(areaRequestDto.getLongitude())
@@ -92,13 +91,13 @@ public class AreaService {
 
         if (!role.equals(Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) &&
             !role.equals(Role.VICE_ADMIN_HEAD_OFFICER)) {
-            throw new CustomException(ErrorValue.UNAUTHORIZED_SERVICE.getMessage());
+            throw new CustomException(ErrorValue.UNAUTHORIZED_SERVICE);
         }
 
-        ViceAdminDetail detail = viceAdminDetailRepository.findById(appUser.getId())
-                .orElseThrow(() -> new CustomException("부 관리자 상세정보를 찾을 수 없습니다."));
-
-        Area area = detail.getArea();
+        Area area = appUser.getArea();
+        if (area == null) {
+            throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
+        }
 
         return AreaResponseDto.from(area);
     }
@@ -106,7 +105,7 @@ public class AreaService {
     @Transactional(readOnly = true)
     public AreaDto getAreaById(Long areaId) {
         Area area = areaRepository.findById(areaId)
-                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
 
         return AreaDto.builder()
                 .id(area.getId())
@@ -119,11 +118,11 @@ public class AreaService {
     @Transactional
     public void deleteAreaById(AppUser requester, Long areaId) {
         if (!requester.getRole().equals(Role.ADMIN)) {
-            throw new CustomException(ErrorValue.UNAUTHORIZED.getMessage());
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
         }
 
         Area area = areaRepository.findById(areaId)
-                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND.getMessage()));
+                .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
 
         areaRepository.delete(area);
     }
