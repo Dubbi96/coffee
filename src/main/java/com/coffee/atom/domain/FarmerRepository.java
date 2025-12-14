@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface FarmerRepository extends JpaRepository<Farmer, Long> {
     @Query("SELECT new com.coffee.atom.dto.FarmersResponseDto( " +
-            "f.id, f.name, vh.appUser.username, s.sectionName) " +
+            "f.id, f.name, vh.username, s.sectionName) " +
             "FROM Farmer f " +
             "JOIN f.villageHead vh " +
             "JOIN vh.section s " +
@@ -19,7 +19,7 @@ public interface FarmerRepository extends JpaRepository<Farmer, Long> {
     List<FarmersResponseDto> findAllApprovedFarmersWithVillageHeadAndSection();
 
     @Query("SELECT new com.coffee.atom.dto.FarmersResponseDto( " +
-           "f.id, f.name, vh.appUser.username, s.sectionName) " +
+           "f.id, f.name, vh.username, s.sectionName) " +
            "FROM Farmer f " +
            "JOIN f.villageHead vh " +
            "JOIN vh.section s " +
@@ -31,7 +31,7 @@ public interface FarmerRepository extends JpaRepository<Farmer, Long> {
     List<FarmersResponseDto> findAllByAreaId(@Param("areaId") Long areaId);
 
     @Query("SELECT new com.coffee.atom.dto.FarmersResponseDto( " +
-           "f.id, f.name, vh.appUser.username, s.sectionName) " +
+           "f.id, f.name, vh.username, s.sectionName) " +
            "FROM Farmer f " +
            "JOIN f.villageHead vh " +
            "JOIN vh.section s " +

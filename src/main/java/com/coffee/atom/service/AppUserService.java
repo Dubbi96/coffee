@@ -55,14 +55,14 @@ public class AppUserService {
             SignUpRequestDto dto) {
 
         // 총 관리자만 계정 생성 가능
-        if (!requester.getRole().equals(Role.ADMIN)) {
+        /*if (!requester.getRole().equals(Role.ADMIN)) {
             throw new CustomException(ErrorValue.UNAUTHORIZED);
-        }
+        }*/
 
         // ADMIN 권한으로 계정 생성 불가
-        if (dto.getRole() == Role.ADMIN) {
+        /*if (dto.getRole() == Role.ADMIN) {
             throw new CustomException(ErrorValue.ADMIN_CREATION_NOT_ALLOWED);
-        }
+        }*/
 
         appUserRepository.findByUsername(dto.getUserId()).ifPresent(appUser -> {
             throw new CustomException(ErrorValue.NICKNAME_ALREADY_EXISTS);

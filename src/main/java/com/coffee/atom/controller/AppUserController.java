@@ -32,7 +32,6 @@ public class AppUserController {
         summary = "신규 계정 생성 1️⃣ 총 관리자", 
         description = "<b>총 관리자만 계정 생성 가능</b><br>" +
                       "생성 가능한 역할: VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER, VILLAGE_HEAD<br>" +
-                      "<b>⚠️ ADMIN 역할은 생성 불가 (정책 1.1)</b><br>" +
                       "<b>VICE_ADMIN 생성 시 정책:</b><br>" +
                       "- 한 지역(Area)에는 각 권한(VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER)당 한 명씩만 할당 가능 (정책 1.5)<br>" +
                       "- areaId 필수 입력<br>" +
