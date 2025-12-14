@@ -393,6 +393,47 @@ public class ApprovalController {
         }
     }
 
+    @PatchMapping(value = "/purchase/{purchaseId}")
+    @Operation(
+        summary = "수매 수정 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
+        description = "<b>기존 수매 정보 수정을 위한 승인 요청</b><br>" +
+                      "요청 가능한 역할: ADMIN, VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER<br>" +
+                      "<b>⚠️ 정책:</b><br>" +
+                      "- Purchase는 면장과 1:1 관계로 기록됨 (정책 2.2)<br>" +
+                      "- villageHeadId 필수 입력 (각 면장당 하나의 Purchase 기록)<br>" +
+                      "- VICE_ADMIN의 경우 본인이 관리하는 Purchase만 수정 가능<br>" +
+                      "- VICE_ADMIN의 경우 본인 Area 내의 면장만 지정 가능<br>" +
+                      "승인자는 approverId로 지정 (ADMIN ID)<br>" +
+                      "수정 대상 purchaseId는 필수"
+    )
+    public void requestApprovalToUpdatePurchase(
+            @PathVariable("purchaseId") Long purchaseId,
+            @Parameter(description = "승인자 ADMIN ID")
+            @RequestParam("approverId") Long approverId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "수매 내역 수정 정보<br>" +
+                            "- <b>id</b>: ⚠️수정에 사용할 필드로 해당 서비스에서는 사용하지 않음<br>" +
+                            "- <b>villageHeadId</b>: 면장 ID (1:1 관계)<br>" +
+                            "- <b>deduction</b>: 차감액<br>" +
+                            "- <b>paymentAmount</b>: 지급액<br>" +
+                            "- <b>purchaseDate</b>: 거래 일자<br>" +
+                            "- <b>quantity</b>: 수량<br>" +
+                            "- <b>totalPrice</b>: 총액<br>" +
+                            "- <b>unitPrice</b>: 단가<br>" +
+                            "- <b>remarks</b>: 비고<br>",
+                    required = true
+            )
+            @RequestBody ApprovalPurchaseRequestDto approvalPurchaseRequestDto,
+            @LoginAppUser AppUser appUser
+    ){
+        approvalPurchaseRequestDto.setId(purchaseId);
+        try {
+            approvalFacadeService.processPurchaseUpdate(appUser, approverId, approvalPurchaseRequestDto);
+        } catch (JsonProcessingException e) {
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
+        }
+    }
+
     @DeleteMapping("/purchase/{purchaseId}")
     @Operation(
         summary = "구매 이력 삭제 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",

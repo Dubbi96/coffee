@@ -67,6 +67,64 @@ public class PurchaseService {
         return approvalPurchaseRequestDto;
     }
 
+    @Transactional
+    public ApprovalPurchaseRequestDto requestApprovalToUpdatePurchase(AppUser requester, ApprovalPurchaseRequestDto approvalPurchaseRequestDto) {
+        // 부관리자만 Purchase 수정 가능
+        if (requester.getRole() != Role.VICE_ADMIN_HEAD_OFFICER && 
+            requester.getRole() != Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER && 
+            requester.getRole() != Role.ADMIN) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+
+        // 기존 Purchase 조회 및 검증
+        Purchase purchase = purchaseRepository.findById(approvalPurchaseRequestDto.getId())
+                .orElseThrow(() -> new CustomException(ErrorValue.PURCHASE_NOT_FOUND));
+
+        // 부관리자의 경우 본인이 관리하는 Purchase만 수정 가능
+        if (requester.getRole() == Role.VICE_ADMIN_HEAD_OFFICER || 
+            requester.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+            if (requester.getArea() == null) {
+                throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
+            }
+            if (!purchase.getManager().getId().equals(requester.getId())) {
+                throw new CustomException(ErrorValue.UNAUTHORIZED_SERVICE);
+            }
+        }
+
+        // 면장 조회 및 검증
+        AppUser villageHead = appUserRepository.findById(approvalPurchaseRequestDto.getVillageHeadId())
+                .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND));
+        
+        if (villageHead.getRole() != Role.VILLAGE_HEAD || 
+            villageHead.getIsApproved() == null ||
+                Boolean.TRUE.equals(!villageHead.getIsApproved())) {
+            throw new CustomException(ErrorValue.VILLAGE_HEAD_NOT_APPROVED);
+        }
+
+        // 부관리자의 경우 본인이 배정된 지역의 면장인지 확인
+        if ((requester.getRole() == Role.VICE_ADMIN_HEAD_OFFICER ||
+            requester.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) && (villageHead.getSection() == null ||
+                villageHead.getSection().getArea() == null ||
+                !villageHead.getSection().getArea().getId().equals(requester.getArea().getId()))) {
+                throw new CustomException(ErrorValue.VILLAGE_HEAD_AREA_MISMATCH);
+            }
+
+
+        // Purchase 정보 업데이트 (승인 전까지는 임시 저장)
+        purchase.updateManager(requester);
+        purchase.updateVillageHead(villageHead);
+        purchase.updatePurchaseDate(approvalPurchaseRequestDto.getPurchaseDate());
+        purchase.updateQuantity(approvalPurchaseRequestDto.getQuantity());
+        purchase.updateUnitPrice(approvalPurchaseRequestDto.getUnitPrice());
+        purchase.updateTotalPrice(approvalPurchaseRequestDto.getTotalPrice());
+        purchase.updateDeduction(approvalPurchaseRequestDto.getDeduction());
+        purchase.updatePaymentAmount(approvalPurchaseRequestDto.getPaymentAmount());
+        purchase.updateRemarks(approvalPurchaseRequestDto.getRemarks());
+        
+        purchaseRepository.save(purchase);
+        return approvalPurchaseRequestDto;
+    }
+
     @Transactional(readOnly = true)
     public List<PurchaseResponseDto> getPurchaseList(AppUser appUser) {
         return switch (appUser.getRole()) {

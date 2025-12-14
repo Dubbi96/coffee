@@ -247,6 +247,23 @@ public class ApprovalFacadeService {
     }
 
     @Transactional
+    public void processPurchaseUpdate(
+            AppUser requester,
+            Long approverId,
+            ApprovalPurchaseRequestDto dto
+    ) throws JsonProcessingException {
+        dto = purchaseService.requestApprovalToUpdatePurchase(requester, dto);
+        approvalService.requestApproval(
+                requester,
+                approverId,
+                dto,
+                Method.UPDATE,
+                ServiceType.PURCHASE,
+                List.of(new EntityReference(EntityType.PURCHASE, dto.getId()))
+        );
+    }
+
+    @Transactional
     public void processPurchaseDelete(
             AppUser requester,
             Long approverId,

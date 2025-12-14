@@ -22,6 +22,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -93,14 +94,38 @@ public class ApprovalService {
 
         switch (role) {
             case ADMIN -> {
-                // ADMIN은 VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER의 요청만 승인
-                List<Role> viceAdminRoles = List.of(Role.VICE_ADMIN_HEAD_OFFICER, Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER);
+                // ADMIN은 본인이 승인자로 지정된 요청 중, ADMIN, VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER가 요청한 것만 조회
+                // VILLAGE_HEAD가 요청한 것은 제외
+                List<Role> allowedRequesterRoles = List.of(
+                    Role.ADMIN, 
+                    Role.VICE_ADMIN_HEAD_OFFICER, 
+                    Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER
+                );
+                Long adminId = appUser.getId();
                 spec = spec.and((root, query, cb) -> 
                     cb.and(
-                        cb.equal(root.get("approver").get("id"), appUser.getId()),
-                        root.get("requester").get("role").in(viceAdminRoles)
+                        // approver가 NULL이거나 현재 ADMIN과 같은 경우
+                        cb.or(
+                            cb.isNull(root.get("approver")),
+                            cb.equal(root.get("approver").get("id"), adminId)
+                        ),
+                        // requester가 허용된 역할인 경우
+                        root.get("requester").get("role").in(allowedRequesterRoles)
                     )
                 );
+                log.debug("ADMIN approval query - adminId: {}, allowedRequesterRoles: {}", adminId, allowedRequesterRoles);
+                
+                // 디버깅: 실제 쿼리 결과 확인
+                List<Approval> allApprovals = approvalRepository.findAll(spec);
+                log.debug("ADMIN query found {} total approvals before pagination", allApprovals.size());
+                for (Approval a : allApprovals) {
+                    log.debug("Approval id={}, approver={}, requester={}, requesterRole={}, status={}", 
+                        a.getId(), 
+                        a.getApprover() != null ? a.getApprover().getId() : "NULL",
+                        a.getRequester().getId(),
+                        a.getRequester().getRole(),
+                        a.getStatus());
+                }
             }
             case VICE_ADMIN_HEAD_OFFICER -> {
                 // 나 또는 같은 Area의 농림부 부관리자 요청만
@@ -125,16 +150,30 @@ public class ApprovalService {
             spec = spec.and((root, query, cb) -> root.get("serviceType").in(serviceTypes));
         }
 
-        if (!pageable.getSort().isSorted()) {
-            pageable = PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize(),
-                Sort.by(Sort.Direction.ASC, "createdAt")
-            );
+        // 페이지네이션 처리: 요청된 페이지가 총 페이지 수를 초과하면 첫 페이지로 조정
+        int requestedPage = pageable.getPageNumber();
+        int pageSize = pageable.getPageSize();
+        Sort sort = pageable.getSort().isSorted() ? pageable.getSort() : Sort.by(Sort.Direction.DESC, "id");
+        
+        // 먼저 전체 개수를 확인하여 총 페이지 수 계산
+        long totalCount = approvalRepository.count(spec);
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+        
+        // 요청된 페이지가 총 페이지 수를 초과하면 첫 페이지로 조정
+        int actualPage = requestedPage;
+        if (totalPages > 0 && requestedPage >= totalPages) {
+            actualPage = 0;
+            log.warn("Requested page {} exceeds total pages {}. Adjusting to page 0.", requestedPage, totalPages);
         }
-
-        return approvalRepository.findAll(spec, pageable)
-                                 .map(ApprovalResponseDto::from);
+        
+        Pageable adjustedPageable = PageRequest.of(actualPage, pageSize, sort);
+        
+        Page<Approval> approvals = approvalRepository.findAll(spec, adjustedPageable);
+        log.info("Found {} approvals for user {} with role {}, requestedPage: {}, actualPage: {}, size: {}, totalPages: {}", 
+            approvals.getTotalElements(), appUser.getId(), appUser.getRole(), 
+            requestedPage, actualPage, pageSize, approvals.getTotalPages());
+        
+        return approvals.map(ApprovalResponseDto::from);
     }
 
     @Transactional
@@ -272,8 +311,59 @@ public class ApprovalService {
                     farmerRepository.save(farmer);
                 }
 
+                if (type == EntityType.PURCHASE) {
+                    Purchase purchase = purchaseRepository.findById(id)
+                            .orElseThrow(() -> new CustomException(ErrorValue.PURCHASE_NOT_FOUND));
 
-                // (추후 FARMER 등 다른 EntityType도 추가 가능)
+                    // 면장 변경
+                    if (jsonNode.has("villageHeadId")) {
+                        Long villageHeadId = jsonNode.get("villageHeadId").asLong();
+                        AppUser villageHead = appUserRepository.findById(villageHeadId)
+                                .orElseThrow(() -> new CustomException(ErrorValue.VILLAGE_HEAD_NOT_FOUND));
+                        if (villageHead.getRole() != Role.VILLAGE_HEAD || 
+                            villageHead.getIsApproved() == null || !villageHead.getIsApproved()) {
+                            throw new CustomException(ErrorValue.VILLAGE_HEAD_NOT_APPROVED);
+                        }
+                        purchase.updateVillageHead(villageHead);
+                    }
+
+                    // 구매일자 업데이트
+                    if (jsonNode.has("purchaseDate")) {
+                        purchase.updatePurchaseDate(LocalDate.parse(jsonNode.get("purchaseDate").asText()));
+                    }
+
+                    // 수량 업데이트
+                    if (jsonNode.has("quantity")) {
+                        purchase.updateQuantity(jsonNode.get("quantity").asLong());
+                    }
+
+                    // 단가 업데이트
+                    if (jsonNode.has("unitPrice")) {
+                        purchase.updateUnitPrice(jsonNode.get("unitPrice").asLong());
+                    }
+
+                    // 총액 업데이트
+                    if (jsonNode.has("totalPrice")) {
+                        purchase.updateTotalPrice(jsonNode.get("totalPrice").asLong());
+                    }
+
+                    // 차감액 업데이트
+                    if (jsonNode.has("deduction")) {
+                        purchase.updateDeduction(jsonNode.get("deduction").asLong());
+                    }
+
+                    // 지급액 업데이트
+                    if (jsonNode.has("paymentAmount")) {
+                        purchase.updatePaymentAmount(jsonNode.get("paymentAmount").asLong());
+                    }
+
+                    // 비고 업데이트
+                    if (jsonNode.has("remarks")) {
+                        purchase.updateRemarks(jsonNode.get("remarks").asText());
+                    }
+
+                    purchaseRepository.save(purchase);
+                }
 
             } catch (JsonProcessingException e) {
                 throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);

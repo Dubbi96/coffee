@@ -26,7 +26,7 @@ public class ApprovalResponseDto {
                 .id(approval.getId())
                 .requesterId(approval.getRequester().getId())
                 .requesterName(approval.getRequester().getUsername())
-                .approverName(approval.getApprover().getUsername())
+                .approverName(approval.getApprover() != null ? approval.getApprover().getUsername() : null)
                 .status(approval.getStatus())
                 .method(approval.getMethod())
                 .serviceType(approval.getServiceType())

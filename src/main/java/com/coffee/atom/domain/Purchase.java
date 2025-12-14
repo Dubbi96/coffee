@@ -56,4 +56,40 @@ public class Purchase {
     public void approveInstance() {
         this.isApproved = true;
     }
+
+    public void updateManager(AppUser manager) {
+        this.manager = manager;
+    }
+
+    public void updateVillageHead(AppUser villageHead) {
+        this.villageHead = villageHead;
+    }
+
+    public void updatePurchaseDate(LocalDate purchaseDate) {
+        this.purchaseDate = purchaseDate;
+    }
+
+    public void updateQuantity(Long quantity) {
+        this.quantity = quantity;
+    }
+
+    public void updateUnitPrice(Long unitPrice) {
+        this.unitPrice = unitPrice;
+    }
+
+    public void updateTotalPrice(Long totalPrice) {
+        this.totalPrice = totalPrice;
+    }
+
+    public void updateDeduction(Long deduction) {
+        this.deduction = deduction;
+    }
+
+    public void updatePaymentAmount(Long paymentAmount) {
+        this.paymentAmount = paymentAmount;
+    }
+
+    public void updateRemarks(String remarks) {
+        this.remarks = remarks;
+    }
 }
