@@ -8,9 +8,11 @@ import com.coffee.atom.domain.appuser.*;
 import com.coffee.atom.dto.PurchaseResponseDto;
 import com.coffee.atom.dto.approval.ApprovalPurchaseRequestDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -126,22 +128,61 @@ public class PurchaseService {
     }
 
     @Transactional(readOnly = true)
-    public List<PurchaseResponseDto> getPurchaseList(AppUser appUser) {
-        return switch (appUser.getRole()) {
-            case ADMIN -> purchaseRepository.findByIsApprovedTrueOrderByPurchaseDateDesc().stream()
-                    .map(PurchaseResponseDto::from)
-                    .toList();
-
-            case VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER -> 
-                    purchaseRepository.findByIsApprovedTrueAndManager_IdOrderByPurchaseDateDesc(appUser.getId()).stream()
-                    .map(PurchaseResponseDto::from)
-                    .toList();
-
-            case VILLAGE_HEAD -> 
-                    // 면장은 본인과 1:1 관계인 Purchase만 조회
-                    purchaseRepository.findByIsApprovedTrueAndVillageHead_IdOrderByPurchaseDateDesc(appUser.getId()).stream()
-                    .map(PurchaseResponseDto::from)
-                    .toList();
-        };
+    public List<PurchaseResponseDto> getPurchaseList(
+            AppUser appUser,
+            Long villageHeadId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        Specification<Purchase> spec = Specification.where(null);
+        
+        // 기본 조건: 승인된 Purchase만
+        spec = spec.and((root, query, cb) -> cb.equal(root.get("isApproved"), true));
+        
+        // 역할별 기본 조건
+        switch (appUser.getRole()) {
+            case ADMIN -> {
+                // ADMIN은 전체 조회 가능
+            }
+            case VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER -> {
+                // 부관리자는 본인이 manager인 Purchase만
+                spec = spec.and((root, query, cb) -> 
+                    cb.equal(root.get("manager").get("id"), appUser.getId())
+                );
+            }
+            case VILLAGE_HEAD -> {
+                // 면장은 본인과 1:1 관계인 Purchase만
+                spec = spec.and((root, query, cb) -> 
+                    cb.equal(root.get("villageHead").get("id"), appUser.getId())
+                );
+            }
+        }
+        
+        // 필터: 면장 ID
+        if (villageHeadId != null) {
+            spec = spec.and((root, query, cb) -> 
+                cb.equal(root.get("villageHead").get("id"), villageHeadId)
+            );
+        }
+        
+        // 필터: 날짜 범위
+        if (startDate != null) {
+            spec = spec.and((root, query, cb) -> 
+                cb.greaterThanOrEqualTo(root.get("purchaseDate"), startDate)
+            );
+        }
+        if (endDate != null) {
+            spec = spec.and((root, query, cb) -> 
+                cb.lessThanOrEqualTo(root.get("purchaseDate"), endDate)
+            );
+        }
+        
+        // 정렬: 구매일자 기준 내림차순
+        List<Purchase> purchases = purchaseRepository.findAll(spec, 
+            org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "purchaseDate"));
+        
+        return purchases.stream()
+                .map(PurchaseResponseDto::from)
+                .toList();
     }
 }

@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -62,18 +63,32 @@ public class ApprovalService {
                 .build();
 
         // 3. 영향받는 엔티티들을 RequestedInstance로 매핑
-        List<RequestedInstance> instances = affectedEntities.stream()
-                .map(ref -> RequestedInstance.builder()
-                        .entityType(ref.entityType())
-                        .instanceId(ref.instanceId())
-                        .approval(approval)
-                        .build())
-                .toList();
+        List<RequestedInstance> instances = new ArrayList<>();
+        for (EntityReference ref : affectedEntities) {
+            RequestedInstance instance = RequestedInstance.builder()
+                    .entityType(ref.entityType())
+                    .instanceId(ref.instanceId())
+                    .approval(approval)
+                    .build();
+            instances.add(instance);
+        }
 
         approval.setRequestedInstance(instances); // 양방향 연결
 
         // 4. 저장
         approvalRepository.save(approval);
+        
+        // 5. ADMIN이 요청한 경우 자동 승인 처리
+        if (requester.getRole() == Role.ADMIN) {
+            log.info("ADMIN user {} created approval {}, auto-approving...", requester.getId(), approval.getId());
+            try {
+                processApproval(approval.getId(), requester);
+                log.info("Auto-approval completed for approval {} by ADMIN {}", approval.getId(), requester.getId());
+            } catch (Exception e) {
+                log.error("Failed to auto-approve approval {} by ADMIN {}: {}", approval.getId(), requester.getId(), e.getMessage(), e);
+                throw e;
+            }
+        }
     }
 
     @Transactional(readOnly = true)
@@ -185,8 +200,12 @@ public class ApprovalService {
 
         Approval approval = approvalRepository.findById(approvalId).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
         
-        // 승인자가 맞는지 확인
-        if (!approval.getApprover().getId().equals(approver.getId())) {
+        // 승인자가 맞는지 확인 (ADMIN이 자기 자신을 승인하는 경우는 허용)
+        if (approval.getApprover() != null && !approval.getApprover().getId().equals(approver.getId())) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+        // ADMIN이 요청한 경우, approver가 null이거나 자기 자신이어야 함
+        if (approval.getApprover() == null && approver.getRole() != Role.ADMIN) {
             throw new CustomException(ErrorValue.UNAUTHORIZED);
         }
 

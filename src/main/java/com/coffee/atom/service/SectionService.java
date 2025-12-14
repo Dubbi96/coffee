@@ -25,14 +25,25 @@ public class SectionService {
     public ApprovalSectionRequestDto requestApprovalToCreateSection(AppUser requester, ApprovalSectionRequestDto approvalSectionRequestDto) {
         if(requester.getRole().equals(Role.VILLAGE_HEAD)) throw new CustomException(ErrorValue.UNAUTHORIZED);
         
-        // 부관리자 권한 체크
-        if (requester.getRole() != Role.VICE_ADMIN_HEAD_OFFICER && 
-            requester.getRole() != Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+        Area area;
+        
+        // ADMIN인 경우: requestDTO의 areaId를 기준으로 Area 조회
+        if (requester.getRole() == Role.ADMIN) {
+            if (approvalSectionRequestDto.getAreaId() == null) {
+                throw new CustomException(ErrorValue.AREA_NOT_FOUND);
+            }
+            area = areaRepository.findById(approvalSectionRequestDto.getAreaId())
+                    .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND));
+        } 
+        // 부관리자인 경우: requester의 Area 사용
+        else if (requester.getRole() == Role.VICE_ADMIN_HEAD_OFFICER || 
+                 requester.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+            area = requester.getArea();
+            if(area == null) throw new CustomException(ErrorValue.AREA_NOT_FOUND);
+        } 
+        else {
             throw new CustomException(ErrorValue.UNAUTHORIZED);
         }
-        
-        Area area = requester.getArea();
-        if(area == null) throw new CustomException(ErrorValue.AREA_NOT_FOUND);
 
         Section section = Section.builder()
                 .sectionName(approvalSectionRequestDto.getSectionName())

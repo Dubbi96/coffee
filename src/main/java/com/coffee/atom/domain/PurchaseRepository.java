@@ -1,10 +1,11 @@
 package com.coffee.atom.domain;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
 
-public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
+public interface PurchaseRepository extends JpaRepository<Purchase, Long>, JpaSpecificationExecutor<Purchase> {
     // ADMIN용: 전체 조회
     List<Purchase> findByIsApprovedTrueOrderByPurchaseDateDesc();
 
