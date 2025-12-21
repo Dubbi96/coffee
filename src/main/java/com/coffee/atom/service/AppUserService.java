@@ -38,6 +38,10 @@ public class AppUserService {
     private final GCSUtil gcsUtil;
     private final FarmerRepository farmerRepository;
     private final AreaRepository areaRepository;
+    private static final int USER_ID_MAX_LENGTH = 50;
+    private static final int USERNAME_MAX_LENGTH = 50;
+    private static final int BANK_NAME_MAX_LENGTH = 255;
+    private static final int ACCOUNT_INFO_MAX_LENGTH = 255;
 
     @Transactional(readOnly = true)
     public SignInResponseDto login(SignInRequestDto accountRequestDto) {
@@ -217,8 +221,13 @@ public class AppUserService {
             throw new CustomException(ErrorValue.UNAUTHORIZED);
         }
 
-        appUserRepository.findByUsername(approvalVillageHeadRequestDto.getUserId()).ifPresent(villageHead -> {
-            throw new CustomException(ErrorValue.NICKNAME_ALREADY_EXISTS);
+        validateVillageHeadCreateRequest(approvalVillageHeadRequestDto);
+
+        appUserRepository.findByUserId(approvalVillageHeadRequestDto.getUserId()).ifPresent(existing -> {
+            throw new CustomException(ErrorValue.USER_ID_ALREADY_EXISTS);
+        });
+        appUserRepository.findByUsername(approvalVillageHeadRequestDto.getUsername()).ifPresent(existing -> {
+            throw new CustomException(ErrorValue.USERNAME_ALREADY_EXISTS);
         });
         String salt = UUID.randomUUID().toString();
         String encodedPassword = passwordEncoder.encode(approvalVillageHeadRequestDto.getPassword() + salt);
@@ -305,6 +314,8 @@ public class AppUserService {
 
     @Transactional
     public ApprovalVillageHeadRequestDto requestApprovalToUpdateVillageHead(AppUser appUser, ApprovalVillageHeadRequestDto dto) {
+        validateVillageHeadUpdateRequest(dto);
+
         AppUser targetUser = appUserRepository.findById(dto.getId())
                 .orElseThrow(() -> new CustomException(ErrorValue.APP_USER_NOT_FOUND));
 
@@ -334,25 +345,31 @@ public class AppUserService {
 
         String directory = "village-head/";
 
-        // identification
-        deleteFileIfExists(targetUser.getIdentificationPhotoUrl(), appUser);
-        String newIdentificationUrl = uploadFileIfPresent(dto.getIdentificationPhoto(), directory, appUser);
-        if (newIdentificationUrl != null) {
-            targetUser.updateIdentificationPhotoUrl(newIdentificationUrl);
+        // identification (빈 파일/미첨부 시 기존 값 유지)
+        if (hasFile(dto.getIdentificationPhoto())) {
+            deleteFileIfExists(targetUser.getIdentificationPhotoUrl(), appUser);
+            String newIdentificationUrl = uploadFileIfPresent(dto.getIdentificationPhoto(), directory, appUser);
+            if (newIdentificationUrl != null) {
+                targetUser.updateIdentificationPhotoUrl(newIdentificationUrl);
+            }
         }
 
-        // contract
-        deleteFileIfExists(targetUser.getContractUrl(), appUser);
-        String newContractUrl = uploadFileIfPresent(dto.getContractFile(), directory, appUser);
-        if (newContractUrl != null) {
-            targetUser.updateContractUrl(newContractUrl);
+        // contract (빈 파일/미첨부 시 기존 값 유지)
+        if (hasFile(dto.getContractFile())) {
+            deleteFileIfExists(targetUser.getContractUrl(), appUser);
+            String newContractUrl = uploadFileIfPresent(dto.getContractFile(), directory, appUser);
+            if (newContractUrl != null) {
+                targetUser.updateContractUrl(newContractUrl);
+            }
         }
 
-        // bankbook
-        deleteFileIfExists(targetUser.getBankbookUrl(), appUser);
-        String newBankbookUrl = uploadFileIfPresent(dto.getBankbookPhoto(), directory, appUser);
-        if (newBankbookUrl != null) {
-            targetUser.updateBankbookUrl(newBankbookUrl);
+        // bankbook (빈 파일/미첨부 시 기존 값 유지)
+        if (hasFile(dto.getBankbookPhoto())) {
+            deleteFileIfExists(targetUser.getBankbookUrl(), appUser);
+            String newBankbookUrl = uploadFileIfPresent(dto.getBankbookPhoto(), directory, appUser);
+            if (newBankbookUrl != null) {
+                targetUser.updateBankbookUrl(newBankbookUrl);
+            }
         }
 
         // 기타 정보 갱신
@@ -365,7 +382,7 @@ public class AppUserService {
 
         // Section 갱신
         Section section = sectionRepository.findById(dto.getSectionId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Section 입니다."));
+                .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
         if (!Boolean.TRUE.equals(section.getIsApproved()))
             throw new CustomException(ErrorValue.SECTION_NOT_FOUND);
         
@@ -414,12 +431,6 @@ public class AppUserService {
 
         Area area = areaRepository.findById(dto.getAreaId())
                 .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND));
-
-        // 라오스 부관리자 지역 이동 제한 체크
-        if (targetUser.getAreaLocked() != null && targetUser.getAreaLocked() && 
-            targetUser.getArea() != null && !targetUser.getArea().getId().equals(area.getId())) {
-            throw new CustomException(ErrorValue.VICE_ADMIN_AREA_CHANGE_NOT_ALLOWED);
-        }
 
         // 지역 변경 시 기존 지역의 다른 부관리자가 있는지 확인
         // 같은 지역으로 변경하는 경우는 체크하지 않음
@@ -527,6 +538,60 @@ public class AppUserService {
         return dto;
     }
 
+    private void validateVillageHeadCreateRequest(ApprovalVillageHeadRequestDto dto) {
+        if (dto == null) {
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
+        }
+        if (!StringUtils.hasText(dto.getUserId())) {
+            throw new CustomException(ErrorValue.USER_ID_REQUIRED);
+        }
+        if (dto.getUserId().length() > USER_ID_MAX_LENGTH) {
+            throw new CustomException(ErrorValue.USER_ID_TOO_LONG);
+        }
+        if (!StringUtils.hasText(dto.getUsername())) {
+            throw new CustomException(ErrorValue.USERNAME_REQUIRED);
+        }
+        if (dto.getUsername().length() > USERNAME_MAX_LENGTH) {
+            throw new CustomException(ErrorValue.USERNAME_TOO_LONG);
+        }
+        if (!StringUtils.hasText(dto.getPassword())) {
+            throw new CustomException(ErrorValue.PASSWORD_REQUIRED);
+        }
+        if (dto.getSectionId() == null) {
+            throw new CustomException(ErrorValue.SECTION_ID_REQUIRED);
+        }
+        if (StringUtils.hasText(dto.getBankName()) && dto.getBankName().length() > BANK_NAME_MAX_LENGTH) {
+            throw new CustomException(ErrorValue.BANK_NAME_TOO_LONG);
+        }
+        if (StringUtils.hasText(dto.getAccountInfo()) && dto.getAccountInfo().length() > ACCOUNT_INFO_MAX_LENGTH) {
+            throw new CustomException(ErrorValue.ACCOUNT_INFO_TOO_LONG);
+        }
+    }
+
+    private void validateVillageHeadUpdateRequest(ApprovalVillageHeadRequestDto dto) {
+        if (dto == null) {
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
+        }
+        if (dto.getId() == null) {
+            throw new CustomException(ErrorValue.VILLAGE_HEAD_ID_REQUIRED);
+        }
+        if (dto.getSectionId() == null) {
+            throw new CustomException(ErrorValue.SECTION_ID_REQUIRED);
+        }
+        if (StringUtils.hasText(dto.getUserId()) && dto.getUserId().length() > USER_ID_MAX_LENGTH) {
+            throw new CustomException(ErrorValue.USER_ID_TOO_LONG);
+        }
+        if (StringUtils.hasText(dto.getUsername()) && dto.getUsername().length() > USERNAME_MAX_LENGTH) {
+            throw new CustomException(ErrorValue.USERNAME_TOO_LONG);
+        }
+        if (StringUtils.hasText(dto.getBankName()) && dto.getBankName().length() > BANK_NAME_MAX_LENGTH) {
+            throw new CustomException(ErrorValue.BANK_NAME_TOO_LONG);
+        }
+        if (StringUtils.hasText(dto.getAccountInfo()) && dto.getAccountInfo().length() > ACCOUNT_INFO_MAX_LENGTH) {
+            throw new CustomException(ErrorValue.ACCOUNT_INFO_TOO_LONG);
+        }
+    }
+
     /**
      * GCS에 ID 카드 업로드 후 URL 반환
      */
@@ -545,6 +610,10 @@ public class AppUserService {
         if (fileUrl != null && !fileUrl.isBlank()) {
             gcsUtil.deleteFileFromGCS(fileUrl, appUser); // 내부에서 로그도 비동기 기록됨
         }
+    }
+
+    private boolean hasFile(MultipartFile file) {
+        return file != null && !file.isEmpty();
     }
 
     private String uploadFileIfPresent(MultipartFile file, String directory, AppUser uploader) {

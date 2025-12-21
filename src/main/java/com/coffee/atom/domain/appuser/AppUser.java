@@ -58,9 +58,6 @@ public class AppUser {
     @Column(name = "id_card_url")
     private String idCardUrl;
 
-    @Column(name = "area_locked")
-    private Boolean areaLocked;
-
     // 면장용 필드
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "section_id")
@@ -115,10 +112,6 @@ public class AppUser {
 
     public void updateIdCardUrl(String idCardUrl) {
         this.idCardUrl = idCardUrl;
-    }
-
-    public void updateAreaLocked(Boolean areaLocked) {
-        this.areaLocked = areaLocked;
     }
 
     // 면장 필드 업데이트 메서드

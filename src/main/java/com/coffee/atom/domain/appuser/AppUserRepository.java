@@ -27,19 +27,24 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
     // 면장 목록 조회 (농부 수 포함) - 전체
     @Query("SELECT new com.coffee.atom.dto.appuser.VillageHeadResponseDto( " +
-           " u.id, u.userId, u.username, s.sectionName, COUNT(DISTINCT f.id) ) " +
+           " u.id, u.userId, u.username, s.sectionName, COUNT(DISTINCT f.id), " +
+           " area.id, area.longitude, area.latitude, area.areaName, " +
+           " s.id, s.longitude, s.latitude ) " +
            "FROM AppUser u " +
            "LEFT JOIN u.section s " +
+           "LEFT JOIN s.area area " +
            "LEFT JOIN Farmer f ON f.villageHead.id = u.id AND f.isApproved = true " +
            "WHERE u.role = com.coffee.atom.domain.appuser.Role.VILLAGE_HEAD " +
            "AND u.isApproved = true " +
            "AND s.isApproved = true " +
-           "GROUP BY u.id, u.userId, u.username, s.sectionName")
+           "GROUP BY u.id, u.userId, u.username, s.sectionName, area.id, area.longitude, area.latitude, area.areaName, s.id, s.longitude, s.latitude")
     List<VillageHeadResponseDto> findAllVillageHeadsWithFarmerCountForAdmin();
 
     // 면장 목록 조회 (농부 수 포함) - 지역별
     @Query("SELECT new com.coffee.atom.dto.appuser.VillageHeadResponseDto( " +
-           " u.id, u.userId, u.username, s.sectionName, COUNT(DISTINCT f.id) ) " +
+           " u.id, u.userId, u.username, s.sectionName, COUNT(DISTINCT f.id), " +
+           " area.id, area.longitude, area.latitude, area.areaName, " +
+           " s.id, s.longitude, s.latitude ) " +
            "FROM AppUser u " +
            "LEFT JOIN u.section s " +
            "LEFT JOIN s.area area " +
@@ -48,7 +53,7 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
            "AND u.role = com.coffee.atom.domain.appuser.Role.VILLAGE_HEAD " +
            "AND u.isApproved = true " +
            "AND s.isApproved = true " +
-           "GROUP BY u.id, u.userId, u.username, s.sectionName")
+           "GROUP BY u.id, u.userId, u.username, s.sectionName, area.id, area.longitude, area.latitude, area.areaName, s.id, s.longitude, s.latitude")
     List<VillageHeadResponseDto> findAllVillageHeadsWithFarmerCountByAreaId(@Param("areaId") Long areaId);
 
     // 부관리자 목록 조회 (지역 포함)

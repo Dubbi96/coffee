@@ -30,6 +30,17 @@ public enum ErrorValue {
     // 계정 생성/수정 관련
     USER_KEY_ALREADY_EXISTS("이미 존재하는 외부 유저입니다."),
     NICKNAME_ALREADY_EXISTS("이미 존재하는 닉네임입니다."),
+    USER_ID_ALREADY_EXISTS("이미 존재하는 사용자 ID입니다."),
+    USERNAME_ALREADY_EXISTS("이미 존재하는 사용자명입니다."),
+    USER_ID_REQUIRED("사용자 ID는 필수입니다."),
+    USERNAME_REQUIRED("사용자명은 필수입니다."),
+    PASSWORD_REQUIRED("비밀번호는 필수입니다."),
+    SECTION_ID_REQUIRED("섹션 ID는 필수입니다."),
+    USER_ID_TOO_LONG("사용자 ID 길이 제한(최대 50자)을 초과했습니다."),
+    USERNAME_TOO_LONG("사용자명 길이 제한(최대 50자)을 초과했습니다."),
+    BANK_NAME_TOO_LONG("은행명 길이 제한(최대 255자)을 초과했습니다."),
+    ACCOUNT_INFO_TOO_LONG("계좌 정보 길이 제한(최대 255자)을 초과했습니다."),
+    VILLAGE_HEAD_ID_REQUIRED("면장 ID는 필수입니다."),
     ADMIN_CREATION_NOT_ALLOWED("ADMIN 권한으로 계정을 생성할 수 없습니다."),
     VICE_ADMIN_ALREADY_EXISTS_IN_AREA("해당 지역에는 이미 해당 권한의 부관리자가 할당되어 있습니다."),
     VICE_ADMIN_INFO_NOT_FOUND("부 관리자 정보가 존재하지 않습니다."),
@@ -58,7 +69,6 @@ public enum ErrorValue {
     WRONG_PASSWORD("올바르지 않은 아이디 및 비밀번호입니다."),
     VILLAGE_HEAD_UPDATE_AREA_MISMATCH("본인이 배정된 지역의 면장만 수정할 수 있습니다."),
     VILLAGE_HEAD_SECTION_ASSIGN_MISMATCH("본인이 배정된 지역의 섹션으로만 배정할 수 있습니다."),
-    VICE_ADMIN_AREA_CHANGE_NOT_ALLOWED("라오스 부관리자는 지역 변경이 불가능합니다."),
     ID_CARD_UPLOAD_FAILED("ID 카드 업로드 실패"),
     
     // 기타 (기존)

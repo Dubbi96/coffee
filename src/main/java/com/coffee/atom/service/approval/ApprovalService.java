@@ -268,16 +268,16 @@ public class ApprovalService {
 
                     if (appUser.getRole() == Role.VILLAGE_HEAD) {
                         // 계좌정보 및 은행명 업데이트
-                        if (jsonNode.has("accountInfo")) {
+                        if (jsonNode.has("accountInfo") && isNonEmptyText(jsonNode.get("accountInfo"))) {
                             appUser.updateAccountInfo(jsonNode.get("accountInfo").asText());
                         }
 
-                        if (jsonNode.has("bankName")) {
+                        if (jsonNode.has("bankName") && isNonEmptyText(jsonNode.get("bankName"))) {
                             appUser.updateBankName(jsonNode.get("bankName").asText());
                         }
 
                         // section 변경
-                        if (jsonNode.has("sectionId")) {
+                        if (jsonNode.has("sectionId") && !jsonNode.get("sectionId").isNull()) {
                             Section section = sectionRepository.findById(jsonNode.get("sectionId").asLong())
                                     .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
                                 if (!section.getIsApproved()) {
@@ -287,13 +287,13 @@ public class ApprovalService {
                         }
 
                         // 식별 URL들 (옵셔널)
-                        if (jsonNode.has("identificationPhotoUrl")) {
+                        if (jsonNode.has("identificationPhotoUrl") && isNonEmptyText(jsonNode.get("identificationPhotoUrl"))) {
                             appUser.updateIdentificationPhotoUrl(jsonNode.get("identificationPhotoUrl").asText());
                         }
-                        if (jsonNode.has("contractFileUrl")) {
+                        if (jsonNode.has("contractFileUrl") && isNonEmptyText(jsonNode.get("contractFileUrl"))) {
                             appUser.updateContractUrl(jsonNode.get("contractFileUrl").asText());
                         }
-                        if (jsonNode.has("bankbookPhotoUrl")) {
+                        if (jsonNode.has("bankbookPhotoUrl") && isNonEmptyText(jsonNode.get("bankbookPhotoUrl"))) {
                             appUser.updateBankbookUrl(jsonNode.get("bankbookPhotoUrl").asText());
                         }
                     }
@@ -388,6 +388,10 @@ public class ApprovalService {
                 throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
             }
         }
+    }
+
+    private boolean isNonEmptyText(JsonNode node) {
+        return node != null && !node.isNull() && node.isTextual() && !node.asText().isBlank();
     }
 
     // 3. DELETE 처리
