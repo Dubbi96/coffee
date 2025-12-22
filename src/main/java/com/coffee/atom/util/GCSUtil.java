@@ -27,17 +27,20 @@ import java.util.UUID;
 @Slf4j
 @Component
 public class GCSUtil {
-    @Value("${gcs.bucket.name}")
-    private String bucketName;
-
     private final FileEventLogService fileEventLogService;
     private final Storage storage;
     private final String gcsUrlPrefix;
+    private final String bucketName;
 
     public GCSUtil(@Value("${gcs.credentials.path}") String credentialsPath,
                    @Value("${gcs.project.id}") String projectId,
+                   @Value("${gcs.bucket.name}") String bucketName,
                    FileEventLogService fileEventLogService) throws IOException {
         this.fileEventLogService = fileEventLogService;
+        this.bucketName = stripSlashes(bucketName);
+        if (this.bucketName == null || this.bucketName.isBlank()) {
+            throw new IllegalStateException("gcs.bucket.name is not configured");
+        }
         
         // credentials 파일을 try-with-resources로 처리하여 리소스 누수 방지
         try (InputStream keyFile = getCredentialsInputStream(credentialsPath)) {
@@ -48,7 +51,7 @@ public class GCSUtil {
         }
         
         // GCS URL prefix를 미리 계산하여 재사용
-        this.gcsUrlPrefix = "https://storage.googleapis.com/" + bucketName + "/";
+        this.gcsUrlPrefix = "https://storage.googleapis.com/" + this.bucketName + "/";
     }
 
     private InputStream getCredentialsInputStream(String credentialsPath) throws IOException {
@@ -92,7 +95,9 @@ public class GCSUtil {
     }
 
     private String buildFilePath(String directory, String fileName) {
-        return (directory != null && !directory.isEmpty()) ? directory + "/" + fileName : fileName;
+        String safeDir = stripSlashes(directory);
+        String safeFile = stripLeadingSlash(fileName);
+        return (safeDir != null && !safeDir.isEmpty()) ? safeDir + "/" + safeFile : safeFile;
     }
 
     public List<String> uploadFilesToGCS(String directory, List<MultipartFile> files, AppUser appUser) throws IOException {
@@ -232,5 +237,15 @@ public class GCSUtil {
             throw new CustomException(ErrorValue.GCS_URL_INVALID);
         }
         return fileUrl.substring(gcsUrlPrefix.length());
+    }
+
+    private String stripSlashes(String value) {
+        if (value == null) return null;
+        return value.replaceAll("^/+", "").replaceAll("/+$", "");
+    }
+
+    private String stripLeadingSlash(String value) {
+        if (value == null) return null;
+        return value.replaceAll("^/+", "");
     }
 }
