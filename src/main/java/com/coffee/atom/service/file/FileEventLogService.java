@@ -110,11 +110,11 @@ public class FileEventLogService {
                         log.getSize(),
                         log.getIsSuccess()
                 ))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<FileEventResponseDto> getCurrentExistingFiles(AppUser appUser) {
+    public List<FileEventResponseDto> getCurrentExistingFiles() {
         List<FileEventLog> logs = fileEventLogRepository.findAllByOrderByCreatedAtDesc();
 
         Map<String, FileEventLog> latestEventByFile = new LinkedHashMap<>();
@@ -138,6 +138,6 @@ public class FileEventLogService {
                         log.getSize(),
                         log.getIsSuccess()
                 ))
-                .collect(Collectors.toList());
+                .toList();
     }
 }

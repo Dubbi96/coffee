@@ -31,7 +31,7 @@ public class FileEventLogController {
 
     @GetMapping("/existing-files")
     @Operation(summary = "존재하는 파일 조회", description = "<b>현재 버킷에 존재하는 파일만 조회</b><br>로그를 기반으로 버킷에 존재하는 파일만 조회")
-    public List<FileEventResponseDto> getFileLogs(@LoginAppUser AppUser appUser) {
-        return fileEventLogService.getCurrentExistingFiles(appUser);
+    public List<FileEventResponseDto> getFileLogs() {
+        return fileEventLogService.getCurrentExistingFiles();
     }
 }

@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 @Builder
 public class FarmerResponseDto {
-    private String sectionName;
+    private Long villageHeadId;
     private String farmerName;
     private String identificationPhotoUrl;
 }

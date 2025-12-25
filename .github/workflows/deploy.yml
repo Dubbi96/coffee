@@ -23,6 +23,19 @@ jobs:
     - name: 1️⃣ Checkout Repository
       uses: actions/checkout@v3
 
+    - name: ☕ Set up JDK 17 (for unit tests)
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: "17"
+        cache: maven
+
+    - name: 🧪 Run unit tests (Maven)
+      id: unit_tests
+      run: |
+        set -o pipefail
+        ./mvnw -B test 2>&1 | tee maven-test.log
+
     - name: 2️⃣ Decode & Restore Service Account Key
       run: |
         echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > coffee-backend-key.json
@@ -56,23 +69,18 @@ jobs:
           --set-env-vars "JWT_SECRET=${{ secrets.JWT_SECRET }},DISCORD_WEBHOOK=${{ secrets.DISCORD_WEBHOOK }},DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
 
     - name: 종료 시간 기록
+      if: always()
       id: end_time
       run: |
         echo "END_TIME=$(date +%s)" >> $GITHUB_ENV
         echo "BUILD_TIME=$(( $(date +%s) - $START_TIME ))" >> $GITHUB_ENV
 
 
-    - name : 배포 실패 시 종료 시간 기록
-      if: failure()
-      run : |
-          echo "END_TIME=$(date +%s)" >> $GITHUB_ENV
-          echo "BUILD_TIME=$(( $(date +%s) - $START_TIME ))" >> $GITHUB_ENV
-
     - name: 빌드 실패 Discord 알림
-      if: failure()
+      if: always() && failure()
       uses: tsickert/discord-webhook@v6.0.0
       with:
-        webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL != '' && secrets.DISCORD_WEBHOOK_URL || secrets.DISCORD_WEBHOOK }}
         embed-title: "🌋 **배포 실패.**"
         embed-url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         embed-description: |
@@ -83,10 +91,10 @@ jobs:
         embed-color: "16711680"
 
     - name: 빌드 성공 Discord 알림
-      if: success()
+      if: always() && success()
       uses: tsickert/discord-webhook@v6.0.0
       with:
-        webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL != '' && secrets.DISCORD_WEBHOOK_URL || secrets.DISCORD_WEBHOOK }}
         embed-title: "✅ **배포 성공.**"
         embed-url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         embed-description: |

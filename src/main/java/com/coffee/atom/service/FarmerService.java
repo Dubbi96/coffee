@@ -44,12 +44,12 @@ public class FarmerService {
         Farmer farmer = farmerRepository.findById(farmerId)
                 .orElseThrow(() -> new CustomException(ErrorValue.FARMER_NOT_FOUND));
 
-        String sectionName = farmer.getVillageHead().getSection() != null 
-                ? farmer.getVillageHead().getSection().getSectionName() 
+        Long villageHeadId = farmer.getVillageHead() != null
+                ? farmer.getVillageHead().getId()
                 : null;
 
         return FarmerResponseDto.builder()
-                .sectionName(sectionName)
+                .villageHeadId(villageHeadId)
                 .farmerName(farmer.getName())
                 .identificationPhotoUrl(farmer.getIdentificationPhotoUrl())
                 .build();
