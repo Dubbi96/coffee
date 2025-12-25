@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.coffee.atom.support.TestFixtures.area;
-import static com.coffee.atom.support.TestFixtures.section;
 import static com.coffee.atom.support.TestFixtures.user;
 import static com.coffee.atom.support.TestFixtures.villageHead;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -96,7 +95,24 @@ class FarmerServiceTest {
     }
 
     @Test
-    void getFarmerDetail_whenSectionIsNull_sectionNameIsNull() {
+    void getFarmerDetail_whenVillageHeadIsNull_villageHeadIdIsNull() {
+        Farmer farmer = Farmer.builder()
+                .id(1L)
+                .name("kim")
+                .villageHead(null)
+                .identificationPhotoUrl("url")
+                .build();
+        when(farmerRepository.findById(1L)).thenReturn(Optional.of(farmer));
+
+        FarmerResponseDto dto = farmerService.getFarmerDetail(1L);
+
+        assertThat(dto.getVillageHeadId()).isNull();
+        assertThat(dto.getFarmerName()).isEqualTo("kim");
+        assertThat(dto.getIdentificationPhotoUrl()).isEqualTo("url");
+    }
+
+    @Test
+    void getFarmerDetail_whenVillageHeadExists_returnsVillageHeadId() {
         AppUser vh = villageHead(10L, null, true);
         Farmer farmer = Farmer.builder()
                 .id(1L)
@@ -108,27 +124,9 @@ class FarmerServiceTest {
 
         FarmerResponseDto dto = farmerService.getFarmerDetail(1L);
 
-        assertThat(dto.getSectionName()).isNull();
+        assertThat(dto.getVillageHeadId()).isEqualTo(10L);
         assertThat(dto.getFarmerName()).isEqualTo("kim");
         assertThat(dto.getIdentificationPhotoUrl()).isEqualTo("url");
-    }
-
-    @Test
-    void getFarmerDetail_whenSectionExists_returnsSectionName() {
-        var a = area(1L);
-        var s = section(2L, a, true);
-        AppUser vh = villageHead(10L, s, true);
-        Farmer farmer = Farmer.builder()
-                .id(1L)
-                .name("kim")
-                .villageHead(vh)
-                .identificationPhotoUrl("url")
-                .build();
-        when(farmerRepository.findById(1L)).thenReturn(Optional.of(farmer));
-
-        FarmerResponseDto dto = farmerService.getFarmerDetail(1L);
-
-        assertThat(dto.getSectionName()).isEqualTo("section-2");
     }
 }
 

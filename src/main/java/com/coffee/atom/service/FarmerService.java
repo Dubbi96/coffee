@@ -43,13 +43,19 @@ public class FarmerService {
     public FarmerResponseDto getFarmerDetail(Long farmerId) {
         Farmer farmer = farmerRepository.findById(farmerId)
                 .orElseThrow(() -> new CustomException(ErrorValue.FARMER_NOT_FOUND));
+        AppUser villageHead = farmer.getVillageHead();
 
-        Long villageHeadId = farmer.getVillageHead() != null
-                ? farmer.getVillageHead().getId()
+        Long villageHeadId = villageHead != null
+                ? villageHead.getId()
+                : null;
+
+        String villageHeadName = villageHead != null
+                ? villageHead.getUsername()
                 : null;
 
         return FarmerResponseDto.builder()
                 .villageHeadId(villageHeadId)
+                .villageHeadName(villageHeadName)
                 .farmerName(farmer.getName())
                 .identificationPhotoUrl(farmer.getIdentificationPhotoUrl())
                 .build();
