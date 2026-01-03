@@ -534,6 +534,74 @@ public class ApprovalController {
         }
     }
 
+    // ============================================
+    // [NEW] Query Parameter 지원 엔드포인트 추가 (2026-01-03)
+    // 기존 경로: /approval/purchase/{purchaseId} (Path Variable)
+    // 새 경로: /approval/purchase?purchaseId=xxx&approverId=xxx (Query Parameter)
+    // 롤백 시: 아래 주석 처리된 코드를 활성화하고 이 메서드를 주석 처리
+    // ============================================
+    @PatchMapping(value = "/purchase", params = "purchaseId")
+    @Operation(
+        summary = "수매 수정 승인 요청 (Query Parameter 지원) 1️⃣ 총 관리자 2️⃣ 부 관리자",
+        description = "<b>기존 수매 정보 수정을 위한 승인 요청 (purchaseId를 query parameter로 받음)</b><br>" +
+                      "요청 가능한 역할: ADMIN, VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER<br>" +
+                      "<b>⚠️ 정책:</b><br>" +
+                      "- Purchase는 면장과 1:1 관계로 기록됨 (정책 2.2)<br>" +
+                      "- villageHeadId 필수 입력 (각 면장당 하나의 Purchase 기록)<br>" +
+                      "- VICE_ADMIN의 경우 본인이 관리하는 Purchase만 수정 가능<br>" +
+                      "- VICE_ADMIN의 경우 본인 Area 내의 면장만 지정 가능<br>" +
+                      "승인자는 approverId로 지정 (ADMIN ID)<br>" +
+                      "수정 대상 purchaseId는 query parameter로 필수"
+    )
+    public void requestApprovalToUpdatePurchaseWithQueryParam(
+            @Parameter(description = "수정 대상 Purchase ID")
+            @RequestParam("purchaseId") Long purchaseId,
+            @Parameter(description = "승인자 ADMIN ID")
+            @RequestParam("approverId") Long approverId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "수매 내역 수정 정보<br>" +
+                            "- <b>id</b>: ⚠️수정에 사용할 필드로 해당 서비스에서는 사용하지 않음<br>" +
+                            "- <b>villageHeadId</b>: 면장 ID (1:1 관계)<br>" +
+                            "- <b>deduction</b>: 차감액<br>" +
+                            "- <b>paymentAmount</b>: 지급액<br>" +
+                            "- <b>purchaseDate</b>: 거래 일자<br>" +
+                            "- <b>quantity</b>: 수량<br>" +
+                            "- <b>totalPrice</b>: 총액<br>" +
+                            "- <b>unitPrice</b>: 단가<br>" +
+                            "- <b>remarks</b>: 비고<br>",
+                    required = true
+            )
+            @RequestBody ApprovalPurchaseRequestDto approvalPurchaseRequestDto,
+            @LoginAppUser AppUser appUser
+    ){
+        // #region agent log
+        if (debugLoggingEnabled) {
+            try {
+                String logEntry = String.format("{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"ApprovalController.requestApprovalToUpdatePurchaseWithQueryParam:509\",\"message\":\"Controller method entry\",\"data\":{\"purchaseId\":%d,\"approverId\":%d,\"appUser\":\"%s\"},\"timestamp\":%d}%n", 
+                    purchaseId, approverId, appUser != null ? (appUser.getId() + "/" + (appUser.getRole() != null ? appUser.getRole().name() : "null")) : "null", System.currentTimeMillis());
+                Files.write(Paths.get(debugLogPath), logEntry.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            } catch (Exception e) {}
+        }
+        // #endregion
+        approvalPurchaseRequestDto.setId(purchaseId);
+        try {
+            approvalFacadeService.processPurchaseUpdate(appUser, approverId, approvalPurchaseRequestDto);
+        } catch (JsonProcessingException e) {
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
+        }
+    }
+    
+    // ============================================
+    // [ROLLBACK] 기존 코드 (Path Variable 방식)
+    // 롤백 시: 위의 requestApprovalToUpdatePurchaseWithQueryParam 메서드를 주석 처리하고
+    // 아래 주석을 해제하여 기존 방식만 사용
+    // ============================================
+    /*
+    // 기존에는 Path Variable 방식만 지원했음
+    // 경로: /approval/purchase/{purchaseId}?approverId=xxx
+    // 롤백 시 이 주석을 해제하고 위의 query parameter 메서드를 주석 처리
+    */
+
     @DeleteMapping("/purchase/{purchaseId}")
     @Operation(
         summary = "구매 이력 삭제 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",

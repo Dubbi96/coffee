@@ -114,6 +114,10 @@ public class WebSecurityConfig {
                                 // Approval 관련 - PATCH (수정/승인/거절) - 더 구체적인 경로를 먼저 매칭
                                 .requestMatchers(HttpMethod.PATCH, "/approval/farmer/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
                                 .requestMatchers(HttpMethod.PATCH, "/approval/purchase/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
+                                // [NEW] Query Parameter 지원을 위한 추가 설정 (2026-01-03)
+                                // 롤백 시: 아래 라인을 주석 처리
+                                .requestMatchers(HttpMethod.PATCH, "/approval/purchase").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
+                                // [ROLLBACK] 기존에는 위의 "/approval/purchase" 라인이 없었음
                                 .requestMatchers(HttpMethod.PATCH, "/approval/approve/**", "/approval/reject/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
                                 .requestMatchers(HttpMethod.PATCH, "/approval/village-head", "/approval/village-head/url").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
                                 
