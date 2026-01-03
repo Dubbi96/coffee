@@ -28,7 +28,7 @@ public class PurchaseController {
         summary = "수매 목록 조회", 
         description = "<b>역할(Role)에 따라 수매 목록을 조회</b><br>" +
                       "<b>ADMIN</b>: 승인된 전체 수매 목록 조회<br>" +
-                      "<b>VICE_ADMIN_HEAD_OFFICER / VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER</b>: 본인이 관리자(manager)로 지정된 수매 목록만 조회<br>" +
+                      "<b>VICE_ADMIN_HEAD_OFFICER / VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER</b>: 본인 <b>지역(Area)</b> 내에서 이루어진 승인된 수매 목록 전체 조회<br>" +
                       "<b>VILLAGE_HEAD</b>: 본인과 1:1 관계인 수매 목록만 조회 (정책 2.2)<br>" +
                       "<b>⚠️ 정책 변경사항:</b><br>" +
                       "- Purchase는 면장과 1:1 관계로 기록됨<br>" +
@@ -53,5 +53,4 @@ public class PurchaseController {
     ) {
         return purchaseService.getPurchaseList(appUser, villageHeadId, startDate, endDate);
     }
-
 }

@@ -150,6 +150,15 @@ class PurchaseServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo(1L);
     }
+
+    @Test
+    void getPurchaseList_viceAdmin_withoutArea_throws() {
+        AppUser viceAdmin = viceAdmin(1L, Role.VICE_ADMIN_HEAD_OFFICER, null);
+
+        assertThatThrownBy(() -> purchaseService.getPurchaseList(viceAdmin, null, null, null))
+                .isInstanceOf(CustomException.class)
+                .hasMessage(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND.getMessage());
+    }
 }
 
 

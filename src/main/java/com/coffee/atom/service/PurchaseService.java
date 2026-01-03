@@ -145,9 +145,12 @@ public class PurchaseService {
                 // ADMIN은 전체 조회 가능
             }
             case VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER -> {
-                // 부관리자는 본인이 manager인 Purchase만
-                spec = spec.and((root, query, cb) -> 
-                    cb.equal(root.get("manager").get("id"), appUser.getId())
+                if (appUser.getArea() == null) {
+                    throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
+                }
+                Long areaId = appUser.getArea().getId();
+                spec = spec.and((root, query, cb) ->
+                        cb.equal(root.get("villageHead").get("section").get("area").get("id"), areaId)
                 );
             }
             case VILLAGE_HEAD -> {

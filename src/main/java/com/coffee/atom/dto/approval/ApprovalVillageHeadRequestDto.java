@@ -2,10 +2,12 @@ package com.coffee.atom.dto.approval;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.multipart.MultipartFile;
 
 @Data
+@NoArgsConstructor
 public class ApprovalVillageHeadRequestDto {
     private Long id;
     private String userId;

@@ -36,6 +36,21 @@ jobs:
         set -o pipefail
         ./mvnw -B test 2>&1 | tee maven-test.log
 
+    - name: 🧾 Prepare unit test log tail (for Discord)
+      if: always()
+      run: |
+        if [ -f maven-test.log ]; then
+          {
+            echo 'TEST_LOG_TAIL<<EOF'
+            echo '```'
+            tail -n 60 maven-test.log
+            echo '```'
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
+        else
+          echo "TEST_LOG_TAIL=(no maven-test.log found)" >> "$GITHUB_ENV"
+        fi
+
     - name: 2️⃣ Decode & Restore Service Account Key
       run: |
         echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > coffee-backend-key.json
@@ -88,6 +103,9 @@ jobs:
           𝘣 **대상 브랜치:** `${{ github.ref_name }}`
           𝑡 **소요 시간:** `${{ env.BUILD_TIME }}초`
           𝒈 **액션 링크:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          **테스트 로그(마지막 60줄):**
+          ${{ env.TEST_LOG_TAIL }}
         embed-color: "16711680"
 
     - name: 빌드 성공 Discord 알림

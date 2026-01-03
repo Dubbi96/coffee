@@ -13,6 +13,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -26,6 +27,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/approval")
 @RequiredArgsConstructor
+@Slf4j
 public class ApprovalController {
     private final ApprovalFacadeService approvalFacadeService;
     private final ApprovalService approvalService;
@@ -107,6 +109,7 @@ public class ApprovalController {
     }
 
     @PostMapping(value = "/village-head", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Deprecated(since = "2026. 01. 15")
     @Operation(
         summary = "면장 생성 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
         description = "<b>면장 계정 생성을 위한 승인 요청</b><br>" +
@@ -149,7 +152,27 @@ public class ApprovalController {
         }
     }
 
+    @PostMapping(value = "/village-head/url", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "면장 생성 승인 요청(URL 기반) 1️⃣ 총 관리자 2️⃣ 부 관리자",
+            description = "<b>Deprecated된 multipart 승인 요청을 대체하는 URL 기반 승인 요청</b><br>" +
+                    "FE는 먼저 <code>/gcs</code>로 업로드해 URL을 획득한 뒤,<br>" +
+                    "여기 API에는 파일이 아닌 URL(String)만 전달합니다."
+    )
+    public void requestApprovalToCreateVillageHeadWithUrl(
+            @RequestParam("approverId") Long approverId,
+            @RequestBody ApprovalVillageHeadRequestDto dto,
+            @LoginAppUser AppUser appUser
+    ) {
+        try {
+            approvalFacadeService.processVillageHeadCreation(appUser, approverId, dto);
+        } catch (JsonProcessingException e) {
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
+        }
+    }
+
     @PostMapping(value = "/farmer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Deprecated(since = "2026. 01. 15")
     @Operation(
         summary = "농부 생성 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자 ",
         description = "<b>농부 계정 생성을 위한 승인 요청 생성</b><br>" +
@@ -175,6 +198,24 @@ public class ApprovalController {
                 new ApprovalFarmerRequestDto(identificationPhoto,name,villageHeadId);
         try {
             approvalFacadeService.processFarmerCreation(appUser, approverId, approvalVillageHeadRequestDto);
+        } catch (JsonProcessingException e) {
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
+        }
+    }
+
+    @PostMapping(value = "/farmer/url", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "농부 생성 승인 요청(URL 기반) 1️⃣ 총 관리자 2️⃣ 부 관리자",
+            description = "<b>Deprecated된 multipart 승인 요청을 대체하는 URL 기반 승인 요청</b><br>" +
+                    "FE는 먼저 /gcs API로 업로드해 URL을 획득한 뒤, 여기 API에는 URL(String)만 전달합니다."
+    )
+    public void requestApprovalToCreateFarmerWithUrl(
+            @RequestParam("approverId") Long approverId,
+            @RequestBody ApprovalFarmerRequestDto dto,
+            @LoginAppUser AppUser appUser
+    ) {
+        try {
+            approvalFacadeService.processFarmerCreation(appUser, approverId, dto);
         } catch (JsonProcessingException e) {
             throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
         }
@@ -250,6 +291,7 @@ public class ApprovalController {
     }
 
     @PatchMapping(value = "/village-head", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Deprecated(since = "2026. 01. 15")
     @Operation(
         summary = "면장 수정 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자",
         description = "<b>면장 계정 수정을 위한 승인 요청</b><br>" +
@@ -294,6 +336,24 @@ public class ApprovalController {
         }
     }
 
+    @PatchMapping(value = "/village-head/url", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "면장 수정 승인 요청(URL 기반) 1️⃣ 총 관리자 2️⃣ 부 관리자",
+            description = "<b>Deprecated된 multipart 승인 요청을 대체하는 URL 기반 승인 요청</b><br>" +
+                    "FE는 먼저 /gcs API로 업로드해 URL을 획득한 뒤, 여기 API에는 URL(String)만 전달합니다."
+    )
+    public void requestApprovalToUpdateVillageHeadWithUrl(
+            @RequestParam("approverId") Long approverId,
+            @RequestBody ApprovalVillageHeadRequestDto dto,
+            @LoginAppUser AppUser appUser
+    ) {
+        try {
+            approvalFacadeService.processVillageHeadUpdate(appUser, approverId, dto);
+        } catch (JsonProcessingException e) {
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
+        }
+    }
+
     @DeleteMapping(value = "/{approvalId}")
     @Operation(
         summary = "요청 삭제 1️⃣ 총 관리자 2️⃣ 부 관리자",
@@ -306,6 +366,7 @@ public class ApprovalController {
     }
 
     @PatchMapping(value = "/farmer/{farmerId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Deprecated(since = "2026. 01. 15")
     @Operation(
         summary = "농부 수정 승인 요청 1️⃣ 총 관리자 2️⃣ 부 관리자 ",
         description = "<b>기존 농부 정보 수정을 위한 승인 요청</b><br>" +
@@ -329,6 +390,26 @@ public class ApprovalController {
                 new ApprovalFarmerRequestDto(identificationPhoto, name, villageHeadId);
         dto.setId(farmerId); // 기존 농부 ID 설정
 
+        try {
+            approvalFacadeService.processFarmerUpdate(appUser, approverId, dto);
+        } catch (JsonProcessingException e) {
+            throw new CustomException(ErrorValue.JSON_PROCESSING_ERROR);
+        }
+    }
+
+    @PatchMapping(value = "/farmer/{farmerId}/url", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "농부 수정 승인 요청(URL 기반) 1️⃣ 총 관리자 2️⃣ 부 관리자",
+            description = "<b>Deprecated된 multipart 승인 요청을 대체하는 URL 기반 승인 요청</b><br>" +
+                    "FE는 먼저 /gcs API로 업로드해 URL을 획득한 뒤, 여기 API에는 URL(String)만 전달합니다."
+    )
+    public void requestApprovalToUpdateFarmerWithUrl(
+            @PathVariable("farmerId") Long farmerId,
+            @RequestParam("approverId") Long approverId,
+            @RequestBody ApprovalFarmerRequestDto dto,
+            @LoginAppUser AppUser appUser
+    ) {
+        dto.setId(farmerId);
         try {
             approvalFacadeService.processFarmerUpdate(appUser, approverId, dto);
         } catch (JsonProcessingException e) {

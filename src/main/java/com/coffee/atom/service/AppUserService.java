@@ -121,6 +121,58 @@ public class AppUserService {
         return newUser.getId();
     }
 
+    /**
+     * URL 기반 회원가입 (Deprecated된 multipart 회원가입을 대체)
+     * - 파일 업로드는 FE가 /gcs API를 통해 선행 처리하고, 여기서는 URL만 저장한다.
+     */
+    @Transactional
+    public Long signUpWithUrls(AppUser requester, SignUpUrlRequestDto dto) {
+        appUserRepository.findByUsername(dto.getUserId()).ifPresent(appUser -> {
+            throw new CustomException(ErrorValue.NICKNAME_ALREADY_EXISTS);
+        });
+
+        String salt = UUID.randomUUID().toString();
+        String encodedPassword = passwordEncoder.encode(dto.getPassword() + salt);
+
+        AppUser.AppUserBuilder userBuilder = AppUser.builder()
+                .userId(dto.getUserId())
+                .username(dto.getUsername())
+                .password(encodedPassword)
+                .salt(salt)
+                .role(dto.getRole())
+                .isApproved(Boolean.TRUE);
+
+        if (dto.getRole() == Role.VICE_ADMIN_HEAD_OFFICER || dto.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+            Area area = areaRepository.findById(dto.getAreaId())
+                    .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND));
+
+            List<AppUser> existingViceAdmins = appUserRepository.findByAreaAndRole(area, dto.getRole());
+            if (!existingViceAdmins.isEmpty()) {
+                throw new CustomException(ErrorValue.VICE_ADMIN_ALREADY_EXISTS_IN_AREA);
+            }
+
+            // URL만 저장
+            userBuilder.area(area)
+                    .idCardUrl(dto.getIdentificationPhotoUrl());
+        }
+
+        if (dto.getRole() == Role.VILLAGE_HEAD) {
+            Section section = sectionRepository.findById(dto.getSectionId())
+                    .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
+
+            userBuilder.section(section)
+                    .bankName(dto.getBankName())
+                    .accountInfo(dto.getAccountInfo())
+                    .identificationPhotoUrl(dto.getIdentificationPhotoUrl())
+                    .contractUrl(dto.getContractFileUrl())
+                    .bankbookUrl(dto.getBankbookPhotoUrl());
+        }
+
+        AppUser newUser = userBuilder.build();
+        appUserRepository.save(newUser);
+        return newUser.getId();
+    }
+
     @Transactional
     public void updateAppUserStatus(AppUser appUser, String username, String password, MultipartFile idCardPhoto) {
         appUser.updateUserName(username);
@@ -135,6 +187,28 @@ public class AppUserService {
             String existingUrl = appUser.getIdCardUrl();
             String newFileUrl = uploadIdCardToGCS(appUser, idCardPhoto, existingUrl);
             appUser.updateIdCardUrl(newFileUrl);
+        }
+
+        appUserRepository.save(appUser);
+    }
+
+    /**
+     * URL 기반 내 정보 수정 (Deprecated된 multipart API를 대체)
+     */
+    @Transactional
+    public void updateAppUserStatusWithUrl(AppUser appUser, String username, String password, String idCardUrl) {
+        appUser.updateUserName(username);
+
+        String salt = UUID.randomUUID().toString();
+        String encodedPassword = passwordEncoder.encode(password + salt);
+        appUser.updatePassword(encodedPassword, salt);
+
+        if ((appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ||
+             appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER) &&
+            StringUtils.hasText(idCardUrl)) {
+            // 기존 파일 정리(선택): 새 URL로 교체하는 경우 기존 URL 삭제
+            deleteFileIfExists(appUser.getIdCardUrl(), appUser);
+            appUser.updateIdCardUrl(idCardUrl);
         }
 
         appUserRepository.save(appUser);
@@ -233,9 +307,15 @@ public class AppUserService {
         String encodedPassword = passwordEncoder.encode(approvalVillageHeadRequestDto.getPassword() + salt);
 
         String directory = "village-head/";
-        String identificationUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getIdentificationPhoto(), directory, appUser);
-        String contractUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getContractFile(), directory, appUser);
-        String bankbookUrl = uploadFileIfPresent(approvalVillageHeadRequestDto.getBankbookPhoto(), directory, appUser);
+        String identificationUrl = hasFile(approvalVillageHeadRequestDto.getIdentificationPhoto())
+                ? uploadFileIfPresent(approvalVillageHeadRequestDto.getIdentificationPhoto(), directory, appUser)
+                : approvalVillageHeadRequestDto.getIdentificationPhotoUrl();
+        String contractUrl = hasFile(approvalVillageHeadRequestDto.getContractFile())
+                ? uploadFileIfPresent(approvalVillageHeadRequestDto.getContractFile(), directory, appUser)
+                : approvalVillageHeadRequestDto.getContractFileUrl();
+        String bankbookUrl = hasFile(approvalVillageHeadRequestDto.getBankbookPhoto())
+                ? uploadFileIfPresent(approvalVillageHeadRequestDto.getBankbookPhoto(), directory, appUser)
+                : approvalVillageHeadRequestDto.getBankbookPhotoUrl();
 
         Section section = sectionRepository.findById(approvalVillageHeadRequestDto.getSectionId())
                         .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
@@ -300,7 +380,9 @@ public class AppUserService {
             }
         }
         String directory = "farmer/";
-        String identificationUrl = uploadFileIfPresent(approvalFarmerRequestDto.getIdentificationPhoto(), directory, appUser);
+        String identificationUrl = hasFile(approvalFarmerRequestDto.getIdentificationPhoto())
+                ? uploadFileIfPresent(approvalFarmerRequestDto.getIdentificationPhoto(), directory, appUser)
+                : approvalFarmerRequestDto.getIdentificationPhotoUrl();
         Farmer farmer = Farmer.builder()
                 .name(approvalFarmerRequestDto.getName())
                 .villageHead(villageHead)
@@ -352,6 +434,9 @@ public class AppUserService {
             if (newIdentificationUrl != null) {
                 targetUser.updateIdentificationPhotoUrl(newIdentificationUrl);
             }
+        } else if (StringUtils.hasText(dto.getIdentificationPhotoUrl())) {
+            deleteFileIfExists(targetUser.getIdentificationPhotoUrl(), appUser);
+            targetUser.updateIdentificationPhotoUrl(dto.getIdentificationPhotoUrl());
         }
 
         // contract (빈 파일/미첨부 시 기존 값 유지)
@@ -361,6 +446,9 @@ public class AppUserService {
             if (newContractUrl != null) {
                 targetUser.updateContractUrl(newContractUrl);
             }
+        } else if (StringUtils.hasText(dto.getContractFileUrl())) {
+            deleteFileIfExists(targetUser.getContractUrl(), appUser);
+            targetUser.updateContractUrl(dto.getContractFileUrl());
         }
 
         // bankbook (빈 파일/미첨부 시 기존 값 유지)
@@ -370,6 +458,9 @@ public class AppUserService {
             if (newBankbookUrl != null) {
                 targetUser.updateBankbookUrl(newBankbookUrl);
             }
+        } else if (StringUtils.hasText(dto.getBankbookPhotoUrl())) {
+            deleteFileIfExists(targetUser.getBankbookUrl(), appUser);
+            targetUser.updateBankbookUrl(dto.getBankbookPhotoUrl());
         }
 
         // 기타 정보 갱신
@@ -457,6 +548,48 @@ public class AppUserService {
         appUserRepository.save(targetUser);
     }
 
+    /**
+     * URL 기반 부관리자 수정 (Deprecated된 multipart API를 대체)
+     */
+    @Transactional
+    public void updateViceAdminWithUrl(Long viceAdminId, AppUser requester, com.coffee.atom.dto.appuser.ViceAdminUpdateUrlRequestDto dto) {
+        if (!requester.getRole().equals(Role.ADMIN)) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+
+        AppUser targetUser = appUserRepository.findById(viceAdminId)
+                .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND));
+
+        if (targetUser.getRole() != Role.VICE_ADMIN_HEAD_OFFICER &&
+            targetUser.getRole() != Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+            throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND);
+        }
+
+        targetUser.updateUserName(dto.getUsername());
+        targetUser.updateUserId(dto.getUserId());
+
+        Area area = areaRepository.findById(dto.getAreaId())
+                .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND));
+
+        if (targetUser.getArea() == null || !targetUser.getArea().getId().equals(area.getId())) {
+            List<AppUser> existingViceAdmins = appUserRepository.findByAreaAndRole(area, targetUser.getRole());
+            existingViceAdmins = existingViceAdmins.stream()
+                    .filter(u -> !u.getId().equals(targetUser.getId()))
+                    .toList();
+            if (!existingViceAdmins.isEmpty()) {
+                throw new CustomException(ErrorValue.VICE_ADMIN_ALREADY_EXISTS_IN_AREA);
+            }
+        }
+
+        if (StringUtils.hasText(dto.getIdCardUrl())) {
+            deleteFileIfExists(targetUser.getIdCardUrl(), requester);
+            targetUser.updateIdCardUrl(dto.getIdCardUrl());
+        }
+
+        targetUser.updateArea(area);
+        appUserRepository.save(targetUser);
+    }
+
     @Transactional(readOnly = true)
     public Object getMyInfo(AppUser appUser) {
         AppUserInfoDto userDto = AppUserInfoDto.builder()
@@ -531,10 +664,14 @@ public class AppUserService {
             throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND);
 
         String directory = "farmer/";
-        String identificationUrl = uploadFileIfPresent(dto.getIdentificationPhoto(), directory, appUser);
+        String identificationUrl = hasFile(dto.getIdentificationPhoto())
+                ? uploadFileIfPresent(dto.getIdentificationPhoto(), directory, appUser)
+                : dto.getIdentificationPhotoUrl();
 
         // 기존 농부 데이터를 기반으로 수정 DTO 구성
-        dto.setIdentificationPhotoUrl(identificationUrl != null ? identificationUrl : farmer.getIdentificationPhotoUrl());
+        dto.setIdentificationPhotoUrl(
+                StringUtils.hasText(identificationUrl) ? identificationUrl : farmer.getIdentificationPhotoUrl()
+        );
         return dto;
     }
 

@@ -28,6 +28,7 @@ public class AppUserController {
     }
 
     @PostMapping(value = "/sign-up", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Deprecated(since = "2026. 01. 15")
     @Operation(
         summary = "신규 계정 생성 1️⃣ 총 관리자", 
         description = "<b>총 관리자만 계정 생성 가능</b><br>" +
@@ -72,14 +73,37 @@ public class AppUserController {
         return appUserService.signUp(appUser, dto);
     }
 
+    @PostMapping(value = "/sign-up/url", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "신규 계정 생성(URL 기반) 1️⃣ 총 관리자",
+            description = "<b>Deprecated된 multipart 회원가입을 대체하는 URL 기반 회원가입</b><br>" +
+                    "FE는 먼저 <code>/gcs/file</code> 또는 <code>/gcs/files</code>로 업로드해 URL을 획득한 뒤,<br>" +
+                    "여기 API에는 파일이 아닌 URL(String)만 전달합니다."
+    )
+    public Long signUpWithUrls(@RequestBody SignUpUrlRequestDto dto, @LoginAppUser AppUser appUser) {
+        return appUserService.signUpWithUrls(appUser, dto);
+    }
+
 
     @PatchMapping(consumes = {"multipart/form-data"})
+    @Deprecated(since = "2026. 01. 15")
     @Operation(summary = "내 정보 수정", description = "<b>내 정보 수정</b> <br> 모든 유저 Role 관계 없이 공통으로 사용 가능 <br>**ADMIN, VILLAGE_HEAD 일 경우** : 유저명, password만 입력 idCardUrl은 null <br>**VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER 일 경우** : idCardUrl까지 첨부 가능")
     public void updateUserStatus(@LoginAppUser AppUser appUser,
                                  @RequestPart("username") String username,
                                  @RequestPart("password") String password,
                                  @RequestPart(value = "idCardFile", required = false) MultipartFile idCardFile) {
         appUserService.updateAppUserStatus(appUser, username, password, idCardFile);
+    }
+
+    @PatchMapping(value = "/url", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "내 정보 수정(URL 기반)",
+            description = "<b>Deprecated된 multipart 내 정보 수정 API를 대체</b><br>" +
+                    "FE는 먼저 /gcs API로 업로드해 URL을 획득한 뒤, 여기 API에는 URL(String)만 전달합니다."
+    )
+    public void updateUserStatusWithUrl(@LoginAppUser AppUser appUser,
+                                        @RequestBody AppUserStatusUpdateUrlRequestDto dto) {
+        appUserService.updateAppUserStatusWithUrl(appUser, dto.getUsername(), dto.getPassword(), dto.getIdCardUrl());
     }
 
     @GetMapping("/village-heads")
@@ -108,6 +132,7 @@ public class AppUserController {
     }
 
     @PatchMapping(value = "/vice-admin/{viceAdminId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Deprecated(since = "2026. 01. 15")
     @Operation(
         summary = "부 관리자 정보 수정 1️⃣ 총 관리자", 
         description = "<b>부 관리자 정보 수정</b><br>" +
@@ -127,6 +152,18 @@ public class AppUserController {
     ) {
         ViceAdminRequestDto dto = new ViceAdminRequestDto(username, userId, areaId, idCardFile);
         appUserService.updateViceAdmin(viceAdminId, appUser, dto);
+    }
+
+    @PatchMapping(value = "/vice-admin/{viceAdminId}/url", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "부 관리자 정보 수정(URL 기반) 1️⃣ 총 관리자",
+            description = "<b>Deprecated된 multipart 부관리자 수정 API를 대체</b><br>" +
+                    "FE는 먼저 /gcs API로 업로드해 URL을 획득한 뒤, 여기 API에는 URL(String)만 전달합니다."
+    )
+    public void updateViceAdminWithUrl(@PathVariable("viceAdminId") Long viceAdminId,
+                                       @LoginAppUser AppUser appUser,
+                                       @RequestBody ViceAdminUpdateUrlRequestDto dto) {
+        appUserService.updateViceAdminWithUrl(viceAdminId, appUser, dto);
     }
 
     @GetMapping("/my")
