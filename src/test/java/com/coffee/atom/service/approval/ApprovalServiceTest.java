@@ -10,6 +10,7 @@ import com.coffee.atom.domain.appuser.AppUser;
 import com.coffee.atom.domain.appuser.AppUserRepository;
 import com.coffee.atom.domain.appuser.Role;
 import com.coffee.atom.domain.area.SectionRepository;
+import com.coffee.atom.util.GCSUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -33,21 +34,21 @@ class ApprovalServiceTest {
     @Test
     void requestApproval_adminRequester_autoCallsProcessApproval() throws JsonProcessingException {
         ApprovalRepository approvalRepository = mock(ApprovalRepository.class);
-        RequestedInstanceRepository requestedInstanceRepository = mock(RequestedInstanceRepository.class);
         AppUserRepository appUserRepository = mock(AppUserRepository.class);
         ObjectMapper objectMapper = mock(ObjectMapper.class);
         SectionRepository sectionRepository = mock(SectionRepository.class);
         FarmerRepository farmerRepository = mock(FarmerRepository.class);
         PurchaseRepository purchaseRepository = mock(PurchaseRepository.class);
+        GCSUtil gcsUtil = mock(GCSUtil.class);
 
         ApprovalService service = Mockito.spy(new ApprovalService(
                 approvalRepository,
-                requestedInstanceRepository,
                 appUserRepository,
                 objectMapper,
                 sectionRepository,
                 farmerRepository,
-                purchaseRepository
+                purchaseRepository,
+                gcsUtil
         ));
 
         AppUser requester = user(1L, Role.ADMIN);
@@ -78,21 +79,21 @@ class ApprovalServiceTest {
     @Test
     void requestApproval_nonAdminRequester_doesNotAutoProcess() throws JsonProcessingException {
         ApprovalRepository approvalRepository = mock(ApprovalRepository.class);
-        RequestedInstanceRepository requestedInstanceRepository = mock(RequestedInstanceRepository.class);
         AppUserRepository appUserRepository = mock(AppUserRepository.class);
         ObjectMapper objectMapper = mock(ObjectMapper.class);
         SectionRepository sectionRepository = mock(SectionRepository.class);
         FarmerRepository farmerRepository = mock(FarmerRepository.class);
         PurchaseRepository purchaseRepository = mock(PurchaseRepository.class);
+        GCSUtil gcsUtil = mock(GCSUtil.class);
 
         ApprovalService service = Mockito.spy(new ApprovalService(
                 approvalRepository,
-                requestedInstanceRepository,
                 appUserRepository,
                 objectMapper,
                 sectionRepository,
                 farmerRepository,
-                purchaseRepository
+                purchaseRepository,
+                gcsUtil
         ));
 
         AppUser requester = user(1L, Role.VICE_ADMIN_HEAD_OFFICER);
@@ -121,21 +122,21 @@ class ApprovalServiceTest {
     @Test
     void processApproval_villageHeadApprover_throwsUnauthorized() {
         ApprovalRepository approvalRepository = mock(ApprovalRepository.class);
-        RequestedInstanceRepository requestedInstanceRepository = mock(RequestedInstanceRepository.class);
         AppUserRepository appUserRepository = mock(AppUserRepository.class);
         ObjectMapper objectMapper = mock(ObjectMapper.class);
         SectionRepository sectionRepository = mock(SectionRepository.class);
         FarmerRepository farmerRepository = mock(FarmerRepository.class);
         PurchaseRepository purchaseRepository = mock(PurchaseRepository.class);
+        GCSUtil gcsUtil = mock(GCSUtil.class);
 
         ApprovalService service = new ApprovalService(
                 approvalRepository,
-                requestedInstanceRepository,
                 appUserRepository,
                 objectMapper,
                 sectionRepository,
                 farmerRepository,
-                purchaseRepository
+                purchaseRepository,
+                gcsUtil
         );
 
         AppUser villageHead = user(10L, Role.VILLAGE_HEAD);
@@ -148,21 +149,21 @@ class ApprovalServiceTest {
     @Test
     void processApproval_create_farmerApprovesInstanceAndSavesApproval() {
         ApprovalRepository approvalRepository = mock(ApprovalRepository.class);
-        RequestedInstanceRepository requestedInstanceRepository = mock(RequestedInstanceRepository.class);
         AppUserRepository appUserRepository = mock(AppUserRepository.class);
         ObjectMapper objectMapper = mock(ObjectMapper.class);
         SectionRepository sectionRepository = mock(SectionRepository.class);
         FarmerRepository farmerRepository = mock(FarmerRepository.class);
         PurchaseRepository purchaseRepository = mock(PurchaseRepository.class);
+        GCSUtil gcsUtil = mock(GCSUtil.class);
 
         ApprovalService service = new ApprovalService(
                 approvalRepository,
-                requestedInstanceRepository,
                 appUserRepository,
                 objectMapper,
                 sectionRepository,
                 farmerRepository,
-                purchaseRepository
+                purchaseRepository,
+                gcsUtil
         );
 
         AppUser approver = user(1L, Role.ADMIN);

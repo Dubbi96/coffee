@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -32,6 +33,12 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class ApprovalController {
+    
+    @Value("${debug.logging.enabled:false}")
+    private boolean debugLoggingEnabled;
+    
+    @Value("${debug.logging.path:.cursor/debug.log}")
+    private String debugLogPath;
     private final ApprovalFacadeService approvalFacadeService;
     private final ApprovalService approvalService;
 
@@ -511,12 +518,13 @@ public class ApprovalController {
             @LoginAppUser AppUser appUser
     ){
         // #region agent log
-        try {
-            String logPath = "/Users/gangjong-won/Dubbi/Coffee-maven/.cursor/debug.log";
-            String logEntry = String.format("{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"ApprovalController.requestApprovalToUpdatePurchase:509\",\"message\":\"Controller method entry\",\"data\":{\"purchaseId\":%d,\"approverId\":%d,\"appUser\":\"%s\"},\"timestamp\":%d}%n", 
-                purchaseId, approverId, appUser != null ? (appUser.getId() + "/" + (appUser.getRole() != null ? appUser.getRole().name() : "null")) : "null", System.currentTimeMillis());
-            Files.write(Paths.get(logPath), logEntry.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-        } catch (Exception e) {}
+        if (debugLoggingEnabled) {
+            try {
+                String logEntry = String.format("{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"ApprovalController.requestApprovalToUpdatePurchase:509\",\"message\":\"Controller method entry\",\"data\":{\"purchaseId\":%d,\"approverId\":%d,\"appUser\":\"%s\"},\"timestamp\":%d}%n", 
+                    purchaseId, approverId, appUser != null ? (appUser.getId() + "/" + (appUser.getRole() != null ? appUser.getRole().name() : "null")) : "null", System.currentTimeMillis());
+                Files.write(Paths.get(debugLogPath), logEntry.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            } catch (Exception e) {}
+        }
         // #endregion
         approvalPurchaseRequestDto.setId(purchaseId);
         try {
