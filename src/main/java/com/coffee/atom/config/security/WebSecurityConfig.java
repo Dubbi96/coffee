@@ -89,15 +89,62 @@ public class WebSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(requests ->
                         requests
+                                // Swagger 및 공개 엔드포인트
                                 .requestMatchers(SWAGGER_URIS).permitAll()
                                 .requestMatchers("/app-user/sign-in").permitAll()
-                                .requestMatchers("/app-user/sign-up").permitAll()
+                                
+                                // AppUser 관련
+                                .requestMatchers(HttpMethod.POST, "/app-user/sign-up", "/app-user/sign-up/url").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.PATCH, "/app-user", "/app-user/url").authenticated()
+                                .requestMatchers(HttpMethod.GET, "/app-user/village-heads", "/app-user/village-head/**", "/app-user/my").authenticated()
+                                .requestMatchers(HttpMethod.GET, "/app-user/vice-admins", "/app-user/vice-admin/**").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.PATCH, "/app-user/vice-admin/**").hasAuthority("ADMIN")
                                 .requestMatchers(HttpMethod.DELETE, "/app-user/**").hasAuthority("ADMIN")
                                 .requestMatchers(HttpMethod.PUT, "/app-user/**").hasAuthority("ADMIN")
-                                .requestMatchers(HttpMethod.POST, "/approval/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER","VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
                                 .requestMatchers(HttpMethod.PUT, "/app-user/password").hasAnyAuthority("ADMIN", "USER")
-                                .requestMatchers("/approval/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER","VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
-                        .anyRequest().authenticated()
+                                
+                                // Approval 관련 - POST (생성 요청)
+                                .requestMatchers(HttpMethod.POST, "/approval/village-head", "/approval/village-head/url",
+                                        "/approval/farmer", "/approval/farmer/url",
+                                        "/approval/purchase", "/approval/section").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
+                                
+                                // Approval 관련 - PATCH (수정/승인/거절)
+                                .requestMatchers(HttpMethod.PATCH, "/approval/approve/**", "/approval/reject/**",
+                                        "/approval/village-head", "/approval/village-head/url",
+                                        "/approval/farmer/**", "/approval/purchase/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
+                                
+                                // Approval 관련 - DELETE
+                                .requestMatchers(HttpMethod.DELETE, "/approval/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
+                                
+                                // Approval 관련 - GET (조회)
+                                .requestMatchers(HttpMethod.GET, "/approval/**").authenticated()
+                                
+                                // Purchase 관련
+                                .requestMatchers(HttpMethod.GET, "/purchase/**").authenticated()
+                                
+                                // Section 관련
+                                .requestMatchers(HttpMethod.POST, "/section").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/section/**").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/section/**").authenticated()
+                                
+                                // Area 관련
+                                .requestMatchers(HttpMethod.POST, "/area").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/area/**").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/area/**").authenticated()
+                                
+                                // Farmer 관련
+                                .requestMatchers(HttpMethod.GET, "/farmer/**").authenticated()
+                                
+                                // File Event 관련
+                                .requestMatchers(HttpMethod.GET, "/file-event/**").authenticated()
+                                
+                                // GCS 관련
+                                .requestMatchers(HttpMethod.POST, "/gcs/**").authenticated()
+                                .requestMatchers(HttpMethod.DELETE, "/gcs/**").authenticated()
+                                .requestMatchers(HttpMethod.GET, "/gcs/**").authenticated()
+                                
+                                // 기타 모든 요청은 인증 필요
+                                .anyRequest().authenticated()
                 ).cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(exceptionHandlerFilter, JwtAuthenticationFilter.class)
