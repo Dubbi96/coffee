@@ -22,6 +22,9 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 
 @RestController
@@ -507,6 +510,14 @@ public class ApprovalController {
             @RequestBody ApprovalPurchaseRequestDto approvalPurchaseRequestDto,
             @LoginAppUser AppUser appUser
     ){
+        // #region agent log
+        try {
+            String logPath = "/Users/gangjong-won/Dubbi/Coffee-maven/.cursor/debug.log";
+            String logEntry = String.format("{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"ApprovalController.requestApprovalToUpdatePurchase:509\",\"message\":\"Controller method entry\",\"data\":{\"purchaseId\":%d,\"approverId\":%d,\"appUser\":\"%s\"},\"timestamp\":%d}%n", 
+                purchaseId, approverId, appUser != null ? (appUser.getId() + "/" + (appUser.getRole() != null ? appUser.getRole().name() : "null")) : "null", System.currentTimeMillis());
+            Files.write(Paths.get(logPath), logEntry.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        } catch (Exception e) {}
+        // #endregion
         approvalPurchaseRequestDto.setId(purchaseId);
         try {
             approvalFacadeService.processPurchaseUpdate(appUser, approverId, approvalPurchaseRequestDto);

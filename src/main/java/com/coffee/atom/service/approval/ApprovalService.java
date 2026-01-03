@@ -9,6 +9,7 @@ import com.coffee.atom.domain.area.Area;
 import com.coffee.atom.domain.area.Section;
 import com.coffee.atom.domain.area.SectionRepository;
 import com.coffee.atom.dto.approval.*;
+import com.coffee.atom.util.GCSUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -34,12 +36,12 @@ import java.util.List;
 public class ApprovalService {
 
     private final ApprovalRepository approvalRepository;
-    private final RequestedInstanceRepository requestedInstanceRepository;
     private final AppUserRepository appUserRepository;
     private final ObjectMapper objectMapper;
     private final SectionRepository sectionRepository;
     private final FarmerRepository farmerRepository;
     private final PurchaseRepository purchaseRepository;
+    private final GCSUtil gcsUtil;
 
     @Transactional
     public void requestApproval(AppUser requester,
@@ -396,20 +398,57 @@ public class ApprovalService {
 
     // 3. DELETE 처리
     private void handleDeleteApproval(Approval approval) {
+        AppUser requester = approval.getRequester();
+        
         for (RequestedInstance instance : approval.getRequestedInstance()) {
             EntityType type = instance.getEntityType();
             Long id = instance.getInstanceId();
 
             switch (type) {
                 case APP_USER -> {
-                    appUserRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
+                    AppUser appUser = appUserRepository.findById(id)
+                            .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
+                    
+                    // GCS 파일 삭제
+                    List<String> fileUrlsToDelete = new ArrayList<>();
+                    if (appUser.getRole() == Role.VILLAGE_HEAD) {
+                        // 면장의 경우: identificationPhotoUrl, contractUrl, bankbookUrl 삭제
+                        if (StringUtils.hasText(appUser.getIdentificationPhotoUrl())) {
+                            fileUrlsToDelete.add(appUser.getIdentificationPhotoUrl());
+                        }
+                        if (StringUtils.hasText(appUser.getContractUrl())) {
+                            fileUrlsToDelete.add(appUser.getContractUrl());
+                        }
+                        if (StringUtils.hasText(appUser.getBankbookUrl())) {
+                            fileUrlsToDelete.add(appUser.getBankbookUrl());
+                        }
+                    } else if (appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER ||
+                               appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+                        // 부관리자의 경우: idCardUrl 삭제
+                        if (StringUtils.hasText(appUser.getIdCardUrl())) {
+                            fileUrlsToDelete.add(appUser.getIdCardUrl());
+                        }
+                    }
+                    
+                    // GCS에서 파일 삭제
+                    if (!fileUrlsToDelete.isEmpty()) {
+                        gcsUtil.deleteFileFromGCS(fileUrlsToDelete, requester);
+                    }
+                    
                     appUserRepository.deleteById(id);
                 }
-                case FARMER ->{
-                    farmerRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
+                case FARMER -> {
+                    Farmer farmer = farmerRepository.findById(id)
+                            .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
+                    
+                    // GCS 파일 삭제: identificationPhotoUrl
+                    if (StringUtils.hasText(farmer.getIdentificationPhotoUrl())) {
+                        gcsUtil.deleteFileFromGCS(farmer.getIdentificationPhotoUrl(), requester);
+                    }
+                    
                     farmerRepository.deleteById(id);
                 }
-                case SECTION ->{
+                case SECTION -> {
                     sectionRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
                     sectionRepository.deleteById(id);
                 }

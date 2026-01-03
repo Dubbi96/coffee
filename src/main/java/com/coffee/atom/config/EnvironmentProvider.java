@@ -30,3 +30,4 @@ public class EnvironmentProvider {
                 environment.getProperty(Value.ACTIVE_PROFILE_KEY), Value.LOCAL);
     }
 }
+

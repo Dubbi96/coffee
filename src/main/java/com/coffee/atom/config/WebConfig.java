@@ -44,6 +44,4 @@ public class WebConfig implements WebMvcConfigurer {
         objectMapper.registerModule(new JavaTimeModule());
         converters.add(1, new MappingJackson2HttpMessageConverter(objectMapper));
     }
-
-
 }

@@ -206,8 +206,11 @@ public class AppUserService {
         if ((appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ||
              appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER) &&
             StringUtils.hasText(idCardUrl)) {
-            // 기존 파일 정리(선택): 새 URL로 교체하는 경우 기존 URL 삭제
-            deleteFileIfExists(appUser.getIdCardUrl(), appUser);
+            // 새 이미지로 바꿨을 때만 기존 파일 삭제
+            String existingUrl = appUser.getIdCardUrl();
+            if (existingUrl != null && !existingUrl.equals(idCardUrl)) {
+                deleteFileIfExists(existingUrl, appUser);
+            }
             appUser.updateIdCardUrl(idCardUrl);
         }
 
@@ -435,7 +438,11 @@ public class AppUserService {
                 targetUser.updateIdentificationPhotoUrl(newIdentificationUrl);
             }
         } else if (StringUtils.hasText(dto.getIdentificationPhotoUrl())) {
-            deleteFileIfExists(targetUser.getIdentificationPhotoUrl(), appUser);
+            // URL 기반 요청: 새 이미지로 바꿨을 때만 기존 파일 삭제
+            String existingUrl = targetUser.getIdentificationPhotoUrl();
+            if (existingUrl != null && !existingUrl.equals(dto.getIdentificationPhotoUrl())) {
+                deleteFileIfExists(existingUrl, appUser);
+            }
             targetUser.updateIdentificationPhotoUrl(dto.getIdentificationPhotoUrl());
         }
 
@@ -447,7 +454,11 @@ public class AppUserService {
                 targetUser.updateContractUrl(newContractUrl);
             }
         } else if (StringUtils.hasText(dto.getContractFileUrl())) {
-            deleteFileIfExists(targetUser.getContractUrl(), appUser);
+            // URL 기반 요청: 새 이미지로 바꿨을 때만 기존 파일 삭제
+            String existingUrl = targetUser.getContractUrl();
+            if (existingUrl != null && !existingUrl.equals(dto.getContractFileUrl())) {
+                deleteFileIfExists(existingUrl, appUser);
+            }
             targetUser.updateContractUrl(dto.getContractFileUrl());
         }
 
@@ -459,7 +470,11 @@ public class AppUserService {
                 targetUser.updateBankbookUrl(newBankbookUrl);
             }
         } else if (StringUtils.hasText(dto.getBankbookPhotoUrl())) {
-            deleteFileIfExists(targetUser.getBankbookUrl(), appUser);
+            // URL 기반 요청: 새 이미지로 바꿨을 때만 기존 파일 삭제
+            String existingUrl = targetUser.getBankbookUrl();
+            if (existingUrl != null && !existingUrl.equals(dto.getBankbookPhotoUrl())) {
+                deleteFileIfExists(existingUrl, appUser);
+            }
             targetUser.updateBankbookUrl(dto.getBankbookPhotoUrl());
         }
 
@@ -582,7 +597,11 @@ public class AppUserService {
         }
 
         if (StringUtils.hasText(dto.getIdCardUrl())) {
-            deleteFileIfExists(targetUser.getIdCardUrl(), requester);
+            // 새 이미지로 바꿨을 때만 기존 파일 삭제
+            String existingUrl = targetUser.getIdCardUrl();
+            if (existingUrl != null && !existingUrl.equals(dto.getIdCardUrl())) {
+                deleteFileIfExists(existingUrl, requester);
+            }
             targetUser.updateIdCardUrl(dto.getIdCardUrl());
         }
 
@@ -664,14 +683,26 @@ public class AppUserService {
             throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND);
 
         String directory = "farmer/";
-        String identificationUrl = hasFile(dto.getIdentificationPhoto())
-                ? uploadFileIfPresent(dto.getIdentificationPhoto(), directory, appUser)
-                : dto.getIdentificationPhotoUrl();
+        String identificationUrl;
+        
+        if (hasFile(dto.getIdentificationPhoto())) {
+            // multipart 파일이 있는 경우: 기존 파일 삭제 후 새 파일 업로드
+            deleteFileIfExists(farmer.getIdentificationPhotoUrl(), appUser);
+            identificationUrl = uploadFileIfPresent(dto.getIdentificationPhoto(), directory, appUser);
+        } else if (StringUtils.hasText(dto.getIdentificationPhotoUrl())) {
+            // URL 기반 요청: 새 이미지로 바꿨을 때만 기존 파일 삭제
+            String existingUrl = farmer.getIdentificationPhotoUrl();
+            if (existingUrl != null && !existingUrl.equals(dto.getIdentificationPhotoUrl())) {
+                deleteFileIfExists(existingUrl, appUser);
+            }
+            identificationUrl = dto.getIdentificationPhotoUrl();
+        } else {
+            // URL이 제공되지 않은 경우 기존 URL 유지
+            identificationUrl = farmer.getIdentificationPhotoUrl();
+        }
 
         // 기존 농부 데이터를 기반으로 수정 DTO 구성
-        dto.setIdentificationPhotoUrl(
-                StringUtils.hasText(identificationUrl) ? identificationUrl : farmer.getIdentificationPhotoUrl()
-        );
+        dto.setIdentificationPhotoUrl(identificationUrl);
         return dto;
     }
 
@@ -694,9 +725,6 @@ public class AppUserService {
         if (!StringUtils.hasText(dto.getPassword())) {
             throw new CustomException(ErrorValue.PASSWORD_REQUIRED);
         }
-        if (dto.getSectionId() == null) {
-            throw new CustomException(ErrorValue.SECTION_ID_REQUIRED);
-        }
         if (StringUtils.hasText(dto.getBankName()) && dto.getBankName().length() > BANK_NAME_MAX_LENGTH) {
             throw new CustomException(ErrorValue.BANK_NAME_TOO_LONG);
         }
@@ -711,9 +739,6 @@ public class AppUserService {
         }
         if (dto.getId() == null) {
             throw new CustomException(ErrorValue.VILLAGE_HEAD_ID_REQUIRED);
-        }
-        if (dto.getSectionId() == null) {
-            throw new CustomException(ErrorValue.SECTION_ID_REQUIRED);
         }
         if (StringUtils.hasText(dto.getUserId()) && dto.getUserId().length() > USER_ID_MAX_LENGTH) {
             throw new CustomException(ErrorValue.USER_ID_TOO_LONG);
