@@ -89,6 +89,9 @@ public class WebSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(requests ->
                         requests
+                                // OPTIONS 요청은 모두 허용 (CORS preflight)
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                
                                 // Swagger 및 공개 엔드포인트
                                 .requestMatchers(SWAGGER_URIS).permitAll()
                                 .requestMatchers("/app-user/sign-in").permitAll()
@@ -108,10 +111,11 @@ public class WebSecurityConfig {
                                         "/approval/farmer", "/approval/farmer/url",
                                         "/approval/purchase", "/approval/section").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
                                 
-                                // Approval 관련 - PATCH (수정/승인/거절)
-                                .requestMatchers(HttpMethod.PATCH, "/approval/approve/**", "/approval/reject/**",
-                                        "/approval/village-head", "/approval/village-head/url",
-                                        "/approval/farmer/**", "/approval/purchase/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
+                                // Approval 관련 - PATCH (수정/승인/거절) - 더 구체적인 경로를 먼저 매칭
+                                .requestMatchers(HttpMethod.PATCH, "/approval/farmer/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
+                                .requestMatchers(HttpMethod.PATCH, "/approval/purchase/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
+                                .requestMatchers(HttpMethod.PATCH, "/approval/approve/**", "/approval/reject/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
+                                .requestMatchers(HttpMethod.PATCH, "/approval/village-head", "/approval/village-head/url").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
                                 
                                 // Approval 관련 - DELETE
                                 .requestMatchers(HttpMethod.DELETE, "/approval/**").hasAnyAuthority("VICE_ADMIN_HEAD_OFFICER", "VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER", "ADMIN")
