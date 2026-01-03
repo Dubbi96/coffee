@@ -11,6 +11,7 @@ import com.coffee.atom.domain.area.SectionRepository;
 import com.coffee.atom.dto.approval.ApprovalSectionRequestDto;
 import com.coffee.atom.dto.area.SectionDto;
 import com.coffee.atom.dto.section.SectionRequestDto;
+import com.coffee.atom.dto.section.SectionWithAreaDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -81,12 +82,13 @@ public class SectionService {
     }
 
     @Transactional(readOnly = true)
-    public SectionDto getSectionById(Long sectionId) {
+    public SectionWithAreaDto getSectionById(Long sectionId) {
         Section section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
 
-        return SectionDto.builder()
+        return SectionWithAreaDto.builder()
                 .id(section.getId())
+                .areaName(section.getArea().getAreaName())
                 .sectionName(section.getSectionName())
                 .latitude(section.getLatitude())
                 .longitude(section.getLongitude())

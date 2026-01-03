@@ -2,8 +2,10 @@ package com.coffee.atom.controller;
 
 import com.coffee.atom.config.security.LoginAppUser;
 import com.coffee.atom.domain.appuser.AppUser;
+import com.coffee.atom.dto.approval.SectionDetailResponseDto;
 import com.coffee.atom.dto.area.SectionDto;
 import com.coffee.atom.dto.section.SectionRequestDto;
+import com.coffee.atom.dto.section.SectionWithAreaDto;
 import com.coffee.atom.service.SectionService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +55,7 @@ public class SectionController {
                       "섹션명, 경도(longitude), 위도(latitude)를 포함한 정보를 반환합니다.<br>" +
                       "해당 ID가 존재하지 않을 경우 예외가 발생합니다."
     )
-    public SectionDto getSectionById(
+    public SectionWithAreaDto getSectionById(
             @PathVariable("sectionId") Long sectionId
     ) {
         return sectionService.getSectionById(sectionId);
