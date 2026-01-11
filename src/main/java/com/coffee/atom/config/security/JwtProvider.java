@@ -27,6 +27,9 @@ public class JwtProvider {
     @Value("${spring.jwt.secret-key}")
     private String secretKey;
 
+    @Value("${spring.jwt.expiration-hours:4}")
+    private long expirationHours;
+
     public String createAccessToken(Long appUserId) {
         return createToken("appUserId", appUserId);
     }
@@ -36,7 +39,7 @@ public class JwtProvider {
         Map<String, Object> claims = getClaims(key, appUserId);
 
         Date now = new Date();
-        Date expiryDate = Date.from(now.toInstant().plus(Duration.ofDays(1)));
+        Date expiryDate = Date.from(now.toInstant().plus(Duration.ofHours(expirationHours)));
 
         return Jwts.builder()
                 .setClaims(claims)

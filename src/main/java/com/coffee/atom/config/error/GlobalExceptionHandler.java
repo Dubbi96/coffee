@@ -5,6 +5,7 @@ import static com.coffee.atom.common.ApiResponse.makeErrorResponse;
 import com.coffee.atom.common.ApiResponse;
 import com.coffee.atom.config.CodeValue;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,10 +18,19 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 @SuppressWarnings({"rawtypes"})
 public class GlobalExceptionHandler {
+    
+    @Value("${spring.profiles.active:local}")
+    private String activeProfile;
+    
+    private boolean isProduction() {
+        return "prod".equals(activeProfile);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        return makeErrorResponse(e.getMessage(), CodeValue.BAD_REQUEST.getValue());
+        String message = isProduction() ? "입력 데이터가 유효하지 않습니다." : e.getMessage();
+        log.error("입력 검증 오류: {}", e.getMessage(), e);
+        return makeErrorResponse(message, CodeValue.BAD_REQUEST.getValue());
     }
 
     @ExceptionHandler(SessionAuthenticationException.class)
@@ -40,8 +50,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse> handleCustomException(RuntimeException e) {
-        log.error(e.getMessage(), e);
-        return makeErrorResponse(e.getMessage(), CodeValue.INTERNAL_ERROR.getValue(), HttpStatus.INTERNAL_SERVER_ERROR);
+        String message = isProduction() ? "서버 오류가 발생했습니다." : e.getMessage();
+        log.error("런타임 오류 발생: {}", e.getMessage(), e);
+        return makeErrorResponse(message, CodeValue.INTERNAL_ERROR.getValue(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -53,16 +64,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse> handleIllegalArgumentException(IllegalArgumentException e) {
+        String message = isProduction() ? "잘못된 요청입니다." : e.getMessage();
         log.warn("잘못된 인자 예외 발생: {}", e.getMessage(), e);
-        // ErrorValue 메시지인 경우 그대로 사용, 아니면 일반 메시지로 처리
-        String message = e.getMessage();
         return makeErrorResponse(message, CodeValue.BAD_REQUEST.getValue(), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiResponse> handleIllegalStateException(IllegalStateException e) {
+        String message = isProduction() ? "잘못된 요청입니다." : e.getMessage();
         log.warn("잘못된 상태 예외 발생: {}", e.getMessage(), e);
-        String message = e.getMessage();
         return makeErrorResponse(message, CodeValue.BAD_REQUEST.getValue(), HttpStatus.BAD_REQUEST);
     }
 }

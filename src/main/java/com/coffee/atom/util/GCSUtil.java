@@ -71,6 +71,9 @@ public class GCSUtil {
     }
 
     public String uploadFileToGCS(String directory, MultipartFile file, AppUser appUser) throws IOException {
+        // 파일 타입 검증
+        validateFileType(file);
+        
         String originalFilename = file.getOriginalFilename();
         String savedFileName = generateUniqueFileName(originalFilename);
         String filePath = buildFilePath(directory, savedFileName);
@@ -92,6 +95,56 @@ public class GCSUtil {
             fileEventLogService.saveLog(appUser, FileEventLogType.UPLOAD, file, filePath, false);
             throw e;
         }
+    }
+    
+    /**
+     * 파일 타입 검증 (MIME 타입 및 확장자)
+     * 허용된 타입: 이미지 (png, jpeg, jpg, gif), PDF
+     */
+    private void validateFileType(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new CustomException(ErrorValue.FILE_EMPTY);
+        }
+        
+        String contentType = file.getContentType();
+        String originalFilename = file.getOriginalFilename();
+        
+        if (originalFilename == null || originalFilename.isBlank()) {
+            throw new CustomException(ErrorValue.FILE_NAME_INVALID);
+        }
+        
+        // 허용된 MIME 타입 목록
+        List<String> allowedMimeTypes = List.of(
+            "image/png", "image/jpeg", "image/jpg", "image/gif",
+            "application/pdf"
+        );
+        
+        // 허용된 확장자 목록
+        List<String> allowedExtensions = List.of(
+            "png", "jpg", "jpeg", "gif", "pdf"
+        );
+        
+        // MIME 타입 검증
+        if (contentType != null && !allowedMimeTypes.contains(contentType.toLowerCase())) {
+            throw new CustomException(ErrorValue.FILE_TYPE_NOT_ALLOWED);
+        }
+        
+        // 확장자 검증
+        String extension = getFileExtension(originalFilename);
+        if (extension == null || !allowedExtensions.contains(extension.toLowerCase())) {
+            throw new CustomException(ErrorValue.FILE_TYPE_NOT_ALLOWED);
+        }
+    }
+    
+    private String getFileExtension(String filename) {
+        if (filename == null || filename.isEmpty()) {
+            return null;
+        }
+        int lastDotIndex = filename.lastIndexOf('.');
+        if (lastDotIndex == -1 || lastDotIndex == filename.length() - 1) {
+            return null;
+        }
+        return filename.substring(lastDotIndex + 1);
     }
 
     private String buildFilePath(String directory, String fileName) {

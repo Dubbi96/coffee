@@ -15,10 +15,11 @@ spring:
     time-zone: Asia/Seoul
   jwt:
     secret-key: ${JWT_SECRET}
+    expiration-hours: 4
   servlet:
     multipart:
-      maxFileSize: 100GB
-      maxRequestSize: 100GB
+      maxFileSize: 100MB
+      maxRequestSize: 100MB
       enabled: true
 
 server:
@@ -51,3 +52,18 @@ logging:
   discord:
     webhook-url: ${DISCORD_WEBHOOK}
   config: classpath:logback.xml
+
+cors:
+  allowed-origins:
+    - "*"  # 로컬 개발 환경에서는 모든 origin 허용
+  allowed-methods:
+    - GET
+    - POST
+    - PUT
+    - PATCH
+    - DELETE
+    - OPTIONS
+    - HEAD
+  allowed-headers: "*"
+  allow-credentials: true
+  max-age: 3600

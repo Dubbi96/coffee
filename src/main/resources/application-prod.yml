@@ -1,3 +1,33 @@
 gcs:
   credentials:
     path: /app/coffee-backend-key.json
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+spring:
+  servlet:
+    multipart:
+      maxFileSize: 50MB
+      maxRequestSize: 50MB
+  jwt:
+    expiration-hours: 3
+
+cors:
+  allowed-origins:
+    - https://teds-roasting.netlify.app
+    - https://*.netlify.app
+  allowed-methods:
+    - GET
+    - POST
+    - PUT
+    - PATCH
+    - DELETE
+    - OPTIONS
+    - HEAD
+  allowed-headers: "*"
+  allow-credentials: true
+  max-age: 3600

@@ -23,6 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.validation.Valid;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -100,7 +101,7 @@ public class ApprovalController {
     )
     public void rejectApproval(
             @PathVariable("approvalId") Long approvalId,
-            @RequestBody RejectApprovalRequestDto rejectApprovalRequestDto,
+            @Valid @RequestBody RejectApprovalRequestDto rejectApprovalRequestDto,
             @LoginAppUser AppUser appUser
     ) {
         approvalService.rejectApproval(approvalId, rejectApprovalRequestDto.getRejectedReason(), appUser);
@@ -257,7 +258,7 @@ public class ApprovalController {
                             "- <b>unitPrice</b>: 단가<br>",
                     required = true
             )
-            @RequestBody ApprovalPurchaseRequestDto approvalPurchaseRequestDto,
+            @Valid @RequestBody ApprovalPurchaseRequestDto approvalPurchaseRequestDto,
             @LoginAppUser AppUser appUser
     ){
         try {
@@ -514,7 +515,7 @@ public class ApprovalController {
                             "- <b>remarks</b>: 비고<br>",
                     required = true
             )
-            @RequestBody ApprovalPurchaseRequestDto approvalPurchaseRequestDto,
+            @Valid @RequestBody ApprovalPurchaseRequestDto approvalPurchaseRequestDto,
             @LoginAppUser AppUser appUser
     ){
         // #region agent log
@@ -571,7 +572,7 @@ public class ApprovalController {
                             "- <b>remarks</b>: 비고<br>",
                     required = true
             )
-            @RequestBody ApprovalPurchaseRequestDto approvalPurchaseRequestDto,
+            @Valid @RequestBody ApprovalPurchaseRequestDto approvalPurchaseRequestDto,
             @LoginAppUser AppUser appUser
     ){
         // #region agent log

@@ -60,6 +60,7 @@ public enum ErrorValue {
     FILE_EMPTY("파일이 비어있습니다."),
     FILES_EMPTY("파일 목록이 비어있습니다."),
     FILE_NAME_INVALID("파일명이 유효하지 않습니다."),
+    FILE_TYPE_NOT_ALLOWED("허용되지 않은 파일 타입입니다."),
     GCS_URL_INVALID("올바르지 않은 GCS URL입니다."),
     
     // 처리 관련

@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 @Slf4j
@@ -22,8 +23,9 @@ public class AppUserController {
     private final AppUserService appUserService;
 
     @PostMapping("/sign-in")
-    public SignInResponseDto login(@RequestBody SignInRequestDto authRequest) {
-        log.info("로그인 요청 받음: {}", authRequest.getUserId());
+    public SignInResponseDto login(@Valid @RequestBody SignInRequestDto authRequest) {
+        // 주의: 패스워드는 로그에 기록하지 않음 (보안)
+        log.info("로그인 요청 받음: userId={}", authRequest.getUserId());
         return appUserService.login(authRequest);
     }
 
@@ -80,7 +82,7 @@ public class AppUserController {
                     "FE는 먼저 <code>/gcs/file</code> 또는 <code>/gcs/files</code>로 업로드해 URL을 획득한 뒤,<br>" +
                     "여기 API에는 파일이 아닌 URL(String)만 전달합니다."
     )
-    public Long signUpWithUrls(@RequestBody SignUpUrlRequestDto dto, @LoginAppUser AppUser appUser) {
+    public Long signUpWithUrls(@Valid @RequestBody SignUpUrlRequestDto dto, @LoginAppUser AppUser appUser) {
         return appUserService.signUpWithUrls(appUser, dto);
     }
 

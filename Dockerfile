@@ -9,8 +9,9 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
+# coffee-backend-key.json은 이미지에 포함하지 않음
+# Cloud Run에서 환경 변수나 Secret Manager를 통해 주입
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/coffee-backend-key.json
-COPY coffee-backend-key.json /app/coffee-backend-key.json
 
 COPY --from=stage1 /opt/app/target/Coffee-1.0.0.jar /app/Coffee-1.0.0.jar
 
@@ -18,4 +19,13 @@ EXPOSE 8080
 
 ENV PORT=8080
 
-CMD ["java", "-jar", "/app/Coffee-1.0.0.jar"]
+# 시작 스크립트: 환경 변수에서 JSON을 읽어서 파일로 저장 (런타임에 주입)
+RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
+    echo 'if [ -n "$$GCP_SA_KEY_JSON" ]; then' >> /app/entrypoint.sh && \
+    echo '  echo "$$GCP_SA_KEY_JSON" > /app/coffee-backend-key.json' >> /app/entrypoint.sh && \
+    echo '  chmod 600 /app/coffee-backend-key.json' >> /app/entrypoint.sh && \
+    echo 'fi' >> /app/entrypoint.sh && \
+    echo 'exec java -jar /app/Coffee-1.0.0.jar' >> /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
+
+CMD ["/app/entrypoint.sh"]

@@ -7,6 +7,7 @@ import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.config.error.ExceptionHandlerFilter;
 import java.io.PrintWriter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -34,6 +35,21 @@ import java.util.List;
 public class WebSecurityConfig {
 
     private final ExceptionHandlerFilter exceptionHandlerFilter;
+
+    @Value("${cors.allowed-origins:*}")
+    private List<String> allowedOrigins;
+
+    @Value("${cors.allowed-methods:GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD}")
+    private List<String> allowedMethods;
+
+    @Value("${cors.allowed-headers:*}")
+    private List<String> allowedHeaders;
+
+    @Value("${cors.allow-credentials:true}")
+    private boolean allowCredentials;
+
+    @Value("${cors.max-age:3600}")
+    private long maxAge;
 
     private static final String[] SWAGGER_URIS = {
             "/swagger-ui/**", "/api-docs",
@@ -92,8 +108,14 @@ public class WebSecurityConfig {
                                 // OPTIONS 요청은 모두 허용 (CORS preflight)
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 
-                                // Swagger 및 공개 엔드포인트
+                                // Health Check 엔드포인트 (공개)
+                                .requestMatchers(HttpMethod.GET, "/health").permitAll()
+                                
+                                // Swagger (프로덕션에서는 비활성화되어 접근 불가)
+                                // 로컬/개발 환경에서만 permitAll, 프로덕션에서는 인증 필요 또는 비활성화
                                 .requestMatchers(SWAGGER_URIS).permitAll()
+                                
+                                // 공개 엔드포인트
                                 .requestMatchers("/app-user/sign-in").permitAll()
                                 
                                 // AppUser 관련
@@ -168,18 +190,28 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowedMethods(List.of(
-                HttpMethod.GET.name(),
-                HttpMethod.HEAD.name(),
-                HttpMethod.POST.name(),
-                HttpMethod.PUT.name(),
-                HttpMethod.DELETE.name(),
-                HttpMethod.PATCH.name(),
-                HttpMethod.OPTIONS.name()
-        ));
-        configuration.setMaxAge(3600L);
+        
+        // 허용된 origin 설정 (설정 파일에서 읽어옴)
+        if (allowedOrigins.size() == 1 && allowedOrigins.get(0).equals("*")) {
+            // 로컬 개발 환경: 모든 origin 허용
+            configuration.setAllowedOriginPatterns(List.of("*"));
+        } else {
+            // 프로덕션 환경: 특정 origin만 허용
+            configuration.setAllowedOrigins(allowedOrigins);
+        }
+        
+        // 허용된 헤더 설정
+        if (allowedHeaders.size() == 1 && allowedHeaders.get(0).equals("*")) {
+            configuration.setAllowedHeaders(List.of("*"));
+        } else {
+            configuration.setAllowedHeaders(allowedHeaders);
+        }
+        
+        // 허용된 HTTP 메서드 설정
+        configuration.setAllowedMethods(allowedMethods);
+        configuration.setAllowCredentials(allowCredentials);
+        configuration.setMaxAge(maxAge);
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

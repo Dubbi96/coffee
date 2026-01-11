@@ -9,11 +9,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    env:
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-
     steps:
 
     - name: Note Build Start Time
@@ -65,15 +60,33 @@ jobs:
       run: gcloud auth configure-docker asia-northeast3-docker.pkg.dev
 
     - name: 5️⃣ Build Docker Image
-      run: docker build -t asia-northeast3-docker.pkg.dev/tedserp/coffee-repo/dubbi-coffee:latest .
+      id: build_image
+      run: |
+        IMAGE_TAG=$(echo ${{ github.sha }} | cut -c1-7)
+        IMAGE_LATEST="asia-northeast3-docker.pkg.dev/tedserp/coffee-repo/dubbi-coffee:latest"
+        IMAGE_TAGGED="asia-northeast3-docker.pkg.dev/tedserp/coffee-repo/dubbi-coffee:${IMAGE_TAG}"
+        docker build -t ${IMAGE_LATEST} -t ${IMAGE_TAGGED} .
+        echo "IMAGE_LATEST=${IMAGE_LATEST}" >> $GITHUB_OUTPUT
+        echo "IMAGE_TAGGED=${IMAGE_TAGGED}" >> $GITHUB_OUTPUT
 
     - name: 6️⃣ Push Docker Image to Artifact Registry
-      run: docker push asia-northeast3-docker.pkg.dev/tedserp/coffee-repo/dubbi-coffee:latest
+      run: |
+        docker push ${{ steps.build_image.outputs.IMAGE_LATEST }}
+        docker push ${{ steps.build_image.outputs.IMAGE_TAGGED }}
 
     - name: 7️⃣ Deploy to Cloud Run
+      env:
+        # 배포 단계에서만 사용하는 환경 변수
+        GCP_SA_KEY_B64: ${{ secrets.GCP_SA_KEY }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       run: |
+        # Service Account Key를 JSON 문자열로 변환
+        GCP_SA_KEY_JSON=$(echo "$GCP_SA_KEY_B64" | base64 --decode)
+        
         gcloud run deploy tedserp \
-          --image=asia-northeast3-docker.pkg.dev/tedserp/coffee-repo/dubbi-coffee:latest \
+          --image=${{ steps.build_image.outputs.IMAGE_LATEST }} \
           --platform=managed \
           --region=asia-northeast3 \
           --allow-unauthenticated \
@@ -82,7 +95,10 @@ jobs:
           --add-cloudsql-instances=tedserp:asia-northeast3:dubbi-coffee \
           --set-env-vars SPRING_PROFILES_ACTIVE=prod \
           --set-env-vars GOOGLE_APPLICATION_CREDENTIALS=/app/coffee-backend-key.json \
-          --set-env-vars "JWT_SECRET=${{ secrets.JWT_SECRET }},DISCORD_WEBHOOK=${{ secrets.DISCORD_WEBHOOK }},DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
+          --set-env-vars "GCP_SA_KEY_JSON=${GCP_SA_KEY_JSON}" \
+          --set-env-vars "JWT_SECRET=${JWT_SECRET}" \
+          --set-env-vars "DISCORD_WEBHOOK=${DISCORD_WEBHOOK}" \
+          --set-env-vars "DB_PASSWORD=${DB_PASSWORD}"
 
     - name: 종료 시간 기록
       if: always()
