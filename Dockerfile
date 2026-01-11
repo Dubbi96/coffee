@@ -25,7 +25,7 @@ RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
     echo 'echo "Starting entrypoint script..."' >> /app/entrypoint.sh && \
     echo 'if [ -n "$$GCP_SA_KEY_B64" ]; then' >> /app/entrypoint.sh && \
     echo '  echo "Decoding GCP service account key..."' >> /app/entrypoint.sh && \
-    echo '  if echo "$$GCP_SA_KEY_B64" | base64 -d > /app/coffee-backend-key.json 2>&1; then' >> /app/entrypoint.sh && \
+    echo '  if echo "$$GCP_SA_KEY_B64" | base64 -d > /app/coffee-backend-key.json 2>/dev/null; then' >> /app/entrypoint.sh && \
     echo '    chmod 600 /app/coffee-backend-key.json' >> /app/entrypoint.sh && \
     echo '    echo "Service account key file created successfully"' >> /app/entrypoint.sh && \
     echo '  else' >> /app/entrypoint.sh && \
