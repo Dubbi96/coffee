@@ -19,10 +19,10 @@ EXPOSE 8080
 
 ENV PORT=8080
 
-# 시작 스크립트: 환경 변수에서 JSON을 읽어서 파일로 저장 (런타임에 주입)
+# 시작 스크립트: 환경 변수에서 base64 인코딩된 JSON을 디코딩하여 파일로 저장 (런타임에 주입)
 RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
-    echo 'if [ -n "$$GCP_SA_KEY_JSON" ]; then' >> /app/entrypoint.sh && \
-    echo '  echo "$$GCP_SA_KEY_JSON" > /app/coffee-backend-key.json' >> /app/entrypoint.sh && \
+    echo 'if [ -n "$$GCP_SA_KEY_B64" ]; then' >> /app/entrypoint.sh && \
+    echo '  echo "$$GCP_SA_KEY_B64" | base64 --decode > /app/coffee-backend-key.json' >> /app/entrypoint.sh && \
     echo '  chmod 600 /app/coffee-backend-key.json' >> /app/entrypoint.sh && \
     echo 'fi' >> /app/entrypoint.sh && \
     echo 'exec java -jar /app/Coffee-1.0.0.jar' >> /app/entrypoint.sh && \

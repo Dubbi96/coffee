@@ -82,8 +82,8 @@ jobs:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       run: |
-        # Service Account Key를 JSON 문자열로 변환
-        GCP_SA_KEY_JSON=$(echo "$GCP_SA_KEY_B64" | base64 --decode)
+        # Service Account Key는 base64로 인코딩된 상태로 전달 (JSON 특수문자 이스케이프 문제 방지)
+        # Dockerfile의 entrypoint.sh에서 base64 디코딩하여 파일로 저장
         
         gcloud run deploy tedserp \
           --image=${{ steps.build_image.outputs.IMAGE_LATEST }} \
@@ -95,7 +95,7 @@ jobs:
           --add-cloudsql-instances=tedserp:asia-northeast3:dubbi-coffee \
           --set-env-vars SPRING_PROFILES_ACTIVE=prod \
           --set-env-vars GOOGLE_APPLICATION_CREDENTIALS=/app/coffee-backend-key.json \
-          --set-env-vars "GCP_SA_KEY_JSON=${GCP_SA_KEY_JSON}" \
+          --set-env-vars "GCP_SA_KEY_B64=${GCP_SA_KEY_B64}" \
           --set-env-vars "JWT_SECRET=${JWT_SECRET}" \
           --set-env-vars "DISCORD_WEBHOOK=${DISCORD_WEBHOOK}" \
           --set-env-vars "DB_PASSWORD=${DB_PASSWORD}"
