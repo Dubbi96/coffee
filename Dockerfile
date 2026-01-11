@@ -20,8 +20,7 @@ EXPOSE 8080
 ENV PORT=8080
 
 # 시작 스크립트: 환경 변수에서 base64 인코딩된 JSON을 디코딩하여 파일로 저장 (런타임에 주입)
-RUN cat > /app/entrypoint.sh << 'EOF' && \
-    chmod +x /app/entrypoint.sh
+RUN cat > /app/entrypoint.sh << 'EOF' && chmod +x /app/entrypoint.sh
 #!/bin/sh
 echo "Starting entrypoint script..."
 if [ -n "$GCP_SA_KEY_B64" ]; then
