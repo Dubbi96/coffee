@@ -13,6 +13,7 @@ import com.coffee.atom.domain.area.SectionRepository;
 import com.coffee.atom.dto.approval.ApprovalFarmerRequestDto;
 import com.coffee.atom.dto.approval.ApprovalVillageHeadRequestDto;
 import com.coffee.atom.dto.appuser.*;
+import com.coffee.atom.dto.appuser.CreateAdminRequestDto;
 import com.coffee.atom.dto.area.AreaDto;
 import com.coffee.atom.dto.area.SectionDto;
 import com.coffee.atom.util.GCSUtil;
@@ -38,6 +39,7 @@ public class AppUserService {
     private final GCSUtil gcsUtil;
     private final FarmerRepository farmerRepository;
     private final AreaRepository areaRepository;
+    private final com.coffee.atom.config.EnvironmentProvider environmentProvider;
     private static final int USER_ID_MAX_LENGTH = 50;
     private static final int USERNAME_MAX_LENGTH = 50;
     private static final int BANK_NAME_MAX_LENGTH = 255;
@@ -787,5 +789,52 @@ public class AppUserService {
             }
         }
         return null;
+    }
+
+    /**
+     * ADMIN 사용자 생성 (서버 내부에서만 사용)
+     * ADMIN 사용자가 없을 때만 생성 가능
+     * 프로파일 제한으로 보안 관리 (local, dev에서만 사용 가능)
+     */
+    @Transactional
+    public Long createAdminUser(CreateAdminRequestDto dto) {
+        // ADMIN 사용자가 이미 존재하는지 확인
+        List<AppUser> adminUsers = appUserRepository.findAll().stream()
+                .filter(user -> user.getRole() == Role.ADMIN)
+                .filter(user -> user.getIsApproved() != null && user.getIsApproved())
+                .toList();
+
+        if (!adminUsers.isEmpty()) {
+            throw new CustomException(ErrorValue.USER_ID_ALREADY_EXISTS);
+        }
+
+        // userId 중복 확인
+        appUserRepository.findByUserId(dto.getUserId()).ifPresent(appUser -> {
+            throw new CustomException(ErrorValue.USER_ID_ALREADY_EXISTS);
+        });
+
+        // username 중복 확인
+        appUserRepository.findByUsername(dto.getUsername()).ifPresent(appUser -> {
+            throw new CustomException(ErrorValue.USERNAME_ALREADY_EXISTS);
+        });
+
+        // Salt 생성
+        String salt = UUID.randomUUID().toString();
+
+        // 비밀번호 인코딩 (password + salt)
+        String encodedPassword = passwordEncoder.encode(dto.getPassword() + salt);
+
+        // ADMIN 사용자 생성
+        AppUser adminUser = AppUser.builder()
+                .userId(dto.getUserId())
+                .username(dto.getUsername())
+                .password(encodedPassword)
+                .salt(salt)
+                .role(Role.ADMIN)
+                .isApproved(Boolean.TRUE)
+                .build();
+
+        appUserRepository.save(adminUser);
+        return adminUser.getId();
     }
 }

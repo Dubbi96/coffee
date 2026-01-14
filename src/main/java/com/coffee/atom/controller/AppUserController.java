@@ -86,6 +86,19 @@ public class AppUserController {
         return appUserService.signUpWithUrls(appUser, dto);
     }
 
+    @PostMapping(value = "/create-admin", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "ADMIN 사용자 생성 (서버 내부용)",
+            description = "<b>⚠️ 서버에서만 사용 가능한 ADMIN 사용자 생성 API</b><br>" +
+                    "- ADMIN 사용자가 없을 때만 생성 가능<br>" +
+                    "- 프로파일 제한: local, dev 프로파일에서만 사용 가능<br>" +
+                    "- 프로덕션 환경에서는 사용 불가<br>" +
+                    "<b>보안 주의:</b> 이 API는 서버 관리자가 초기 ADMIN 계정을 생성하기 위한 용도입니다."
+    )
+    public Long createAdmin(@Valid @RequestBody CreateAdminRequestDto dto) {
+        return appUserService.createAdminUser(dto);
+    }
+
 
     @PatchMapping(consumes = {"multipart/form-data"})
     @Deprecated(since = "2026. 01. 15")

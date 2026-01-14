@@ -118,6 +118,9 @@ public class WebSecurityConfig {
                                 // 공개 엔드포인트
                                 .requestMatchers("/app-user/sign-in").permitAll()
                                 
+                                // ADMIN 생성 엔드포인트 (서버 내부용, 프로파일 제한으로 보안 관리)
+                                .requestMatchers(HttpMethod.POST, "/app-user/create-admin").permitAll()
+                                
                                 // AppUser 관련
                                 .requestMatchers(HttpMethod.POST, "/app-user/sign-up", "/app-user/sign-up/url").hasAuthority("ADMIN")
                                 .requestMatchers(HttpMethod.PATCH, "/app-user", "/app-user/url").authenticated()
