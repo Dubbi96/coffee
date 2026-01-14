@@ -172,7 +172,7 @@ public class ApprovalController {
     )
     public void requestApprovalToCreateVillageHeadWithUrl(
             @RequestParam("approverId") Long approverId,
-            @RequestBody ApprovalVillageHeadRequestDto dto,
+            @Valid @RequestBody ApprovalVillageHeadRequestDto dto,
             @LoginAppUser AppUser appUser
     ) {
         try {
@@ -222,7 +222,7 @@ public class ApprovalController {
     )
     public void requestApprovalToCreateFarmerWithUrl(
             @RequestParam("approverId") Long approverId,
-            @RequestBody ApprovalFarmerRequestDto dto,
+            @Valid @RequestBody ApprovalFarmerRequestDto dto,
             @LoginAppUser AppUser appUser
     ) {
         try {
@@ -291,7 +291,7 @@ public class ApprovalController {
                             "- <b>areaId</b>: ⚠️부 관리자의 경우 지역 ID 입력 하더라도 본인이 배정된 Area만 사용 가능<br>",
                     required = true
             )
-            @RequestBody ApprovalSectionRequestDto approvalSectionRequestDto,
+            @Valid @RequestBody ApprovalSectionRequestDto approvalSectionRequestDto,
             @LoginAppUser AppUser appUser
     ){
         try {
@@ -355,7 +355,7 @@ public class ApprovalController {
     )
     public void requestApprovalToUpdateVillageHeadWithUrl(
             @RequestParam("approverId") Long approverId,
-            @RequestBody ApprovalVillageHeadRequestDto dto,
+            @Valid @RequestBody ApprovalVillageHeadRequestDto dto,
             @LoginAppUser AppUser appUser
     ) {
         try {
@@ -417,7 +417,7 @@ public class ApprovalController {
     public void requestApprovalToUpdateFarmerWithUrl(
             @PathVariable("farmerId") Long farmerId,
             @RequestParam("approverId") Long approverId,
-            @RequestBody ApprovalFarmerRequestDto dto,
+            @Valid @RequestBody ApprovalFarmerRequestDto dto,
             @LoginAppUser AppUser appUser
     ) {
         dto.setId(farmerId);

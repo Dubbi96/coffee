@@ -196,8 +196,14 @@ public class WebSecurityConfig {
             // 로컬 개발 환경: 모든 origin 허용
             configuration.setAllowedOriginPatterns(List.of("*"));
         } else {
-            // 프로덕션 환경: 특정 origin만 허용
-            configuration.setAllowedOrigins(allowedOrigins);
+            // 프로덕션 환경: 특정 origin만 허용 (와일드카드 패턴 지원)
+            // 와일드카드가 포함된 경우 setAllowedOriginPatterns 사용, 그 외에는 setAllowedOrigins 사용
+            boolean hasWildcard = allowedOrigins.stream().anyMatch(origin -> origin.contains("*"));
+            if (hasWildcard) {
+                configuration.setAllowedOriginPatterns(allowedOrigins);
+            } else {
+                configuration.setAllowedOrigins(allowedOrigins);
+            }
         }
         
         // 허용된 헤더 설정

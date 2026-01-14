@@ -8,6 +8,7 @@ import com.coffee.atom.dto.area.AreaResponseDto;
 import com.coffee.atom.dto.area.AreaSectionResponseDto;
 import com.coffee.atom.service.AreaService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,7 +29,7 @@ public class AreaController {
     )
     public void saveArea(
             @LoginAppUser AppUser appUser,
-            @RequestBody AreaRequestDto areaRequestDto
+            @Valid @RequestBody AreaRequestDto areaRequestDto
     ) {
         areaService.saveArea(appUser ,areaRequestDto);
     }

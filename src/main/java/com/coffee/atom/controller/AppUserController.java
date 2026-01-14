@@ -104,7 +104,7 @@ public class AppUserController {
                     "FE는 먼저 /gcs API로 업로드해 URL을 획득한 뒤, 여기 API에는 URL(String)만 전달합니다."
     )
     public void updateUserStatusWithUrl(@LoginAppUser AppUser appUser,
-                                        @RequestBody AppUserStatusUpdateUrlRequestDto dto) {
+                                        @Valid @RequestBody AppUserStatusUpdateUrlRequestDto dto) {
         appUserService.updateAppUserStatusWithUrl(appUser, dto.getUsername(), dto.getPassword(), dto.getIdCardUrl());
     }
 
@@ -164,7 +164,7 @@ public class AppUserController {
     )
     public void updateViceAdminWithUrl(@PathVariable("viceAdminId") Long viceAdminId,
                                        @LoginAppUser AppUser appUser,
-                                       @RequestBody ViceAdminUpdateUrlRequestDto dto) {
+                                       @Valid @RequestBody ViceAdminUpdateUrlRequestDto dto) {
         appUserService.updateViceAdminWithUrl(viceAdminId, appUser, dto);
     }
 

@@ -8,6 +8,7 @@ import com.coffee.atom.dto.section.SectionRequestDto;
 import com.coffee.atom.dto.section.SectionWithAreaDto;
 import com.coffee.atom.service.SectionService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,7 +28,7 @@ public class SectionController {
                       "- 타 권한의 AppUser로 해당 서비스 호출 시 UNAUTHORIZED 메세지 반환"
     )
     public void saveSection(
-            @RequestBody SectionRequestDto sectionRequestDto,
+            @Valid @RequestBody SectionRequestDto sectionRequestDto,
             @LoginAppUser AppUser appUser
     ) {
         sectionService.createSection(appUser, sectionRequestDto);
