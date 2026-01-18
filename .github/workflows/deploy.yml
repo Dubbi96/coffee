@@ -149,9 +149,26 @@ jobs:
         JWT_SECRET: ${{ secrets.JWT_SECRET }}
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        # Swagger 관련 환경 변수 (선택사항)
+        # SWAGGER_ENABLED: true로 설정하면 Swagger UI 및 API Docs 활성화
+        # SWAGGER_ALLOWED_IPS: 접근 허용 IP 목록 (쉼표로 구분, 와일드카드 및 CIDR 지원)
+        #   예시: "203.0.113.0,192.168.1.0/24,10.0.0.*"
+        #   비어있으면 모든 IP에서 접근 가능 (SWAGGER_ENABLED=true일 때만)
+        # SWAGGER_ENABLED: ${{ secrets.SWAGGER_ENABLED }}
+        # SWAGGER_ALLOWED_IPS: ${{ secrets.SWAGGER_ALLOWED_IPS }}
       run: |
         echo "Cloud Run 배포 시작..."
         echo "배포 이미지: ${{ needs.build-and-push.outputs.image_latest }}"
+        
+        # Swagger 환경 변수 설정 (선택사항)
+        # 필요 시 아래 주석을 해제하고 GitHub Secrets에 값을 설정하세요.
+        # SWAGGER_ENV_VARS=""
+        # if [ -n "${{ secrets.SWAGGER_ENABLED }}" ]; then
+        #   SWAGGER_ENV_VARS="${SWAGGER_ENV_VARS} --set-env-vars SWAGGER_ENABLED=${{ secrets.SWAGGER_ENABLED }}"
+        # fi
+        # if [ -n "${{ secrets.SWAGGER_ALLOWED_IPS }}" ]; then
+        #   SWAGGER_ENV_VARS="${SWAGGER_ENV_VARS} --set-env-vars SWAGGER_ALLOWED_IPS=${{ secrets.SWAGGER_ALLOWED_IPS }}"
+        # fi
         
         gcloud run deploy tedserp \
           --image=${{ needs.build-and-push.outputs.image_latest }} \
@@ -167,6 +184,8 @@ jobs:
           --set-env-vars "JWT_SECRET=${JWT_SECRET}" \
           --set-env-vars "DISCORD_WEBHOOK=${DISCORD_WEBHOOK}" \
           --set-env-vars "DB_PASSWORD=${DB_PASSWORD}"
+          # Swagger 환경 변수 추가 (필요 시 주석 해제)
+          # ${SWAGGER_ENV_VARS}
 
   # ========================================
   # 4. 알림 Job

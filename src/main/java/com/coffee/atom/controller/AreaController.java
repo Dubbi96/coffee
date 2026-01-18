@@ -37,22 +37,27 @@ public class AreaController {
     @GetMapping("/with-sections")
     @Operation(
         summary = "지역 및 섹션 조회",
-        description = "<b>지역 및 섹션 조회</b><br>" +
+        description = "<b>지역 및 섹션 조회 (권한별 필터링)</b><br>" +
+                      "<b>1️⃣ 총 관리자 (ADMIN)</b>: 모든 지역 및 섹션 조회<br>" +
+                      "<b>2️⃣ 부 관리자 (VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER)</b>: 본인이 속한 Area와 그 Area 내의 Section만 조회<br>" +
+                      "<b>3️⃣ 면장 (VILLAGE_HEAD)</b>: 조회 불가 (UNAUTHORIZED)<br>" +
                       "정렬 기준 1: 지역은 areaName의 순서로 정렬<br>" +
                       "정렬 기준 2: 섹션또한 sectionName의 순서로 정렬<br>" +
-                      "모든 사용자가 조회 가능하며, 승인된 섹션만 조회됨"
+                      "승인된 섹션만 조회됨"
     )
     public List<AreaSectionResponseDto> getAreasWithSections(
+            @LoginAppUser AppUser appUser
     ) {
-        return areaService.getAreasWithSections();
+        return areaService.getAreasWithSections(appUser);
     }
 
     @GetMapping()
     @Operation(
         summary = "지역만 조회",
         description = "<b>역할(Role)에 따라 조회되는 지역 목록</b><br>" +
-                      "<b>ADMIN</b>: 모든 지역 목록 조회<br>" +
-                      "<b>VICE_ADMIN_HEAD_OFFICER / VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER</b>: 본인이 배정된 지역만 조회<br>" +
+                      "<b>1️⃣ 총 관리자 (ADMIN)</b>: 모든 지역 목록 조회<br>" +
+                      "<b>2️⃣ 부 관리자 (VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER)</b>: 본인이 배정된 지역만 조회<br>" +
+                      "<b>3️⃣ 면장 (VILLAGE_HEAD)</b>: 조회 불가 (UNAUTHORIZED)<br>" +
                       "정렬 기준: 지역은 areaName의 순서로 정렬"
     )
     public List<AreaResponseDto> getArea(

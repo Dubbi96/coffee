@@ -4,9 +4,9 @@ gcs:
 
 springdoc:
   api-docs:
-    enabled: false
+    enabled: ${SWAGGER_ENABLED:true}
   swagger-ui:
-    enabled: false
+    enabled: ${SWAGGER_ENABLED:true}
 
 spring:
   servlet:
@@ -31,3 +31,16 @@ cors:
   allowed-headers: "*"
   allow-credentials: true
   max-age: 3600
+
+# Swagger 접근 제어 설정
+# SWAGGER_ENABLED: true로 설정 시 Swagger UI 및 API Docs 활성화 (기본값: false)
+# swagger.allowed-ips: Swagger 접근을 허용할 IP 주소 목록 (쉼표로 구분)
+#   - 비어있으면 모든 IP에서 접근 가능 (SWAGGER_ENABLED=true일 때만)
+#   - 설정하면 지정된 IP에서만 접근 가능
+#   - 와일드카드 지원: "192.168.1.*"
+#   - CIDR 표기법 지원: "192.168.1.0/24"
+# 예시:
+# swagger:
+#   allowed-ips: "203.0.113.0,192.168.1.0/24,10.0.0.*"
+swagger:
+  allowed-ips: ${SWAGGER_ALLOWED_IPS:}

@@ -23,6 +23,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -50,6 +51,9 @@ public class WebSecurityConfig {
 
     @Value("${cors.max-age:3600}")
     private long maxAge;
+
+    @Value("${swagger.allowed-ips:}")
+    private String allowedIpsConfig;
 
     private static final String[] SWAGGER_URIS = {
             "/swagger-ui/**", "/api-docs",
@@ -111,9 +115,22 @@ public class WebSecurityConfig {
                                 // Health Check 엔드포인트 (공개)
                                 .requestMatchers(HttpMethod.GET, "/health").permitAll()
                                 
-                                // Swagger (프로덕션에서는 비활성화되어 접근 불가)
-                                // 로컬/개발 환경에서만 permitAll, 프로덕션에서는 인증 필요 또는 비활성화
-                                .requestMatchers(SWAGGER_URIS).permitAll()
+                                // Swagger 접근 제어
+                                // IP 제한이 설정된 경우 허용된 IP에서만 접근 가능, 그 외에는 permitAll
+                                .requestMatchers(SWAGGER_URIS).access((authentication, object) -> {
+                                    HttpServletRequest request = (HttpServletRequest) object.getRequest();
+                                    List<String> allowedIps = parseAllowedIps(allowedIpsConfig);
+                                    if (allowedIps != null && !allowedIps.isEmpty()) {
+                                        String clientIp = getClientIpAddress(request);
+                                        boolean isAllowed = allowedIps.stream()
+                                                .anyMatch(ip -> matchesIp(clientIp, ip));
+                                        return isAllowed 
+                                                ? new org.springframework.security.authorization.AuthorizationDecision(true)
+                                                : new org.springframework.security.authorization.AuthorizationDecision(false);
+                                    }
+                                    // IP 제한이 없으면 모든 접근 허용
+                                    return new org.springframework.security.authorization.AuthorizationDecision(true);
+                                })
                                 
                                 // 공개 엔드포인트
                                 .requestMatchers("/app-user/sign-in").permitAll()
@@ -197,7 +214,7 @@ public class WebSecurityConfig {
         // 허용된 origin 설정 (설정 파일에서 읽어옴)
         if (allowedOrigins.size() == 1 && allowedOrigins.get(0).equals("*")) {
             // 로컬 개발 환경: 모든 origin 허용
-            configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedOriginPatterns(List.of("*"));
         } else {
             // 프로덕션 환경: 특정 origin만 허용 (와일드카드 패턴 지원)
             // 와일드카드가 포함된 경우 setAllowedOriginPatterns 사용, 그 외에는 setAllowedOrigins 사용
@@ -211,7 +228,7 @@ public class WebSecurityConfig {
         
         // 허용된 헤더 설정
         if (allowedHeaders.size() == 1 && allowedHeaders.get(0).equals("*")) {
-            configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of("*"));
         } else {
             configuration.setAllowedHeaders(allowedHeaders);
         }
@@ -224,5 +241,97 @@ public class WebSecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    /**
+     * 허용된 IP 설정 문자열을 리스트로 파싱합니다.
+     * 쉼표로 구분된 IP 주소 목록을 처리합니다.
+     */
+    private List<String> parseAllowedIps(String config) {
+        if (config == null || config.trim().isEmpty()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(config.split(","))
+                .map(String::trim)
+                .filter(ip -> !ip.isEmpty())
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * 클라이언트의 실제 IP 주소를 추출합니다.
+     * 프록시/로드 밸런서 환경을 고려하여 X-Forwarded-For 헤더를 확인합니다.
+     */
+    private String getClientIpAddress(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            // X-Forwarded-For는 여러 IP가 콤마로 구분될 수 있음 (첫 번째가 실제 클라이언트 IP)
+            return xForwardedFor.split(",")[0].trim();
+        }
+        
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isEmpty()) {
+            return xRealIp;
+        }
+        
+        return request.getRemoteAddr();
+    }
+
+    /**
+     * 클라이언트 IP가 허용된 IP 패턴과 일치하는지 확인합니다.
+     * 와일드카드(*) 및 CIDR 표기법을 지원합니다.
+     */
+    private boolean matchesIp(String clientIp, String allowedIp) {
+        if (clientIp == null || allowedIp == null) {
+            return false;
+        }
+        
+        // 정확한 IP 일치
+        if (clientIp.equals(allowedIp)) {
+            return true;
+        }
+        
+        // 와일드카드 패턴 지원 (예: "192.168.1.*")
+        if (allowedIp.contains("*")) {
+            String pattern = allowedIp.replace(".", "\\.").replace("*", ".*");
+            return clientIp.matches(pattern);
+        }
+        
+        // CIDR 표기법 지원 (예: "192.168.1.0/24")
+        if (allowedIp.contains("/")) {
+            return matchesCidr(clientIp, allowedIp);
+        }
+        
+        return false;
+    }
+
+    /**
+     * CIDR 표기법으로 IP 범위를 확인합니다.
+     */
+    private boolean matchesCidr(String clientIp, String cidr) {
+        try {
+            String[] parts = cidr.split("/");
+            String networkIp = parts[0];
+            int prefixLength = Integer.parseInt(parts[1]);
+            
+            long clientIpLong = ipToLong(clientIp);
+            long networkIpLong = ipToLong(networkIp);
+            long mask = (0xFFFFFFFFL << (32 - prefixLength)) & 0xFFFFFFFFL;
+            
+            return (clientIpLong & mask) == (networkIpLong & mask);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * IP 주소를 long 값으로 변환합니다.
+     */
+    private long ipToLong(String ip) {
+        String[] parts = ip.split("\\.");
+        long result = 0;
+        for (int i = 0; i < 4; i++) {
+            result = (result << 8) + Integer.parseInt(parts[i]);
+        }
+        return result;
     }
 }

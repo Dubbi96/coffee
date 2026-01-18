@@ -145,6 +145,9 @@ public class AppUserService {
                 .isApproved(Boolean.TRUE);
 
         if (dto.getRole() == Role.VICE_ADMIN_HEAD_OFFICER || dto.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+            if (dto.getAreaId() == null) {
+                throw new CustomException(ErrorValue.AREA_NOT_FOUND);
+            }
             Area area = areaRepository.findById(dto.getAreaId())
                     .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND));
 
@@ -205,15 +208,17 @@ public class AppUserService {
         String encodedPassword = passwordEncoder.encode(password + salt);
         appUser.updatePassword(encodedPassword, salt);
 
-        if ((appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ||
-             appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER) &&
-            StringUtils.hasText(idCardUrl)) {
-            // 새 이미지로 바꿨을 때만 기존 파일 삭제
-            String existingUrl = appUser.getIdCardUrl();
-            if (existingUrl != null && !existingUrl.equals(idCardUrl)) {
-                deleteFileIfExists(existingUrl, appUser);
+        if (appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ||
+            appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER) {
+            // null이면 null로 저장, 값이 있으면 값 저장
+            if (idCardUrl != null) {
+                // 새 이미지로 바꿨을 때만 기존 파일 삭제
+                String existingUrl = appUser.getIdCardUrl();
+                if (existingUrl != null && !existingUrl.equals(idCardUrl)) {
+                    deleteFileIfExists(existingUrl, appUser);
+                }
             }
-            appUser.updateIdCardUrl(idCardUrl);
+            appUser.updateIdCardUrl(idCardUrl);  // null이어도 저장
         }
 
         appUserRepository.save(appUser);
@@ -432,52 +437,70 @@ public class AppUserService {
 
         String directory = "village-head/";
 
-        // identification (빈 파일/미첨부 시 기존 값 유지)
+        // identification (파일이 있으면 파일 업로드, 없으면 URL 필드 확인 - null이 명시적으로 전달되면 null로 저장)
         if (hasFile(dto.getIdentificationPhoto())) {
             deleteFileIfExists(targetUser.getIdentificationPhotoUrl(), appUser);
             String newIdentificationUrl = uploadFileIfPresent(dto.getIdentificationPhoto(), directory, appUser);
             if (newIdentificationUrl != null) {
                 targetUser.updateIdentificationPhotoUrl(newIdentificationUrl);
             }
-        } else if (StringUtils.hasText(dto.getIdentificationPhotoUrl())) {
-            // URL 기반 요청: 새 이미지로 바꿨을 때만 기존 파일 삭제
+        } else {
+            // URL 필드 처리: null이 명시적으로 전달되면 null로 저장, 값이 있으면 값 저장
+            String newUrl = dto.getIdentificationPhotoUrl();
             String existingUrl = targetUser.getIdentificationPhotoUrl();
-            if (existingUrl != null && !existingUrl.equals(dto.getIdentificationPhotoUrl())) {
+            if (newUrl != null && existingUrl != null && !newUrl.equals(existingUrl)) {
+                // 새 이미지로 바꿨을 때만 기존 파일 삭제
+                deleteFileIfExists(existingUrl, appUser);
+            } else if (newUrl == null && existingUrl != null) {
+                // null로 변경하려는 경우 기존 파일 삭제
                 deleteFileIfExists(existingUrl, appUser);
             }
-            targetUser.updateIdentificationPhotoUrl(dto.getIdentificationPhotoUrl());
+            // null이든 값이든 모두 저장 (JSON에 필드가 포함되어 있는 경우)
+            targetUser.updateIdentificationPhotoUrl(newUrl);
         }
 
-        // contract (빈 파일/미첨부 시 기존 값 유지)
+        // contract (파일이 있으면 파일 업로드, 없으면 URL 필드 확인 - null이 명시적으로 전달되면 null로 저장)
         if (hasFile(dto.getContractFile())) {
             deleteFileIfExists(targetUser.getContractUrl(), appUser);
             String newContractUrl = uploadFileIfPresent(dto.getContractFile(), directory, appUser);
             if (newContractUrl != null) {
                 targetUser.updateContractUrl(newContractUrl);
             }
-        } else if (StringUtils.hasText(dto.getContractFileUrl())) {
-            // URL 기반 요청: 새 이미지로 바꿨을 때만 기존 파일 삭제
+        } else {
+            // URL 필드 처리: null이 명시적으로 전달되면 null로 저장, 값이 있으면 값 저장
+            String newUrl = dto.getContractFileUrl();
             String existingUrl = targetUser.getContractUrl();
-            if (existingUrl != null && !existingUrl.equals(dto.getContractFileUrl())) {
+            if (newUrl != null && existingUrl != null && !newUrl.equals(existingUrl)) {
+                // 새 이미지로 바꿨을 때만 기존 파일 삭제
+                deleteFileIfExists(existingUrl, appUser);
+            } else if (newUrl == null && existingUrl != null) {
+                // null로 변경하려는 경우 기존 파일 삭제
                 deleteFileIfExists(existingUrl, appUser);
             }
-            targetUser.updateContractUrl(dto.getContractFileUrl());
+            // null이든 값이든 모두 저장 (JSON에 필드가 포함되어 있는 경우)
+            targetUser.updateContractUrl(newUrl);
         }
 
-        // bankbook (빈 파일/미첨부 시 기존 값 유지)
+        // bankbook (파일이 있으면 파일 업로드, 없으면 URL 필드 확인 - null이 명시적으로 전달되면 null로 저장)
         if (hasFile(dto.getBankbookPhoto())) {
             deleteFileIfExists(targetUser.getBankbookUrl(), appUser);
             String newBankbookUrl = uploadFileIfPresent(dto.getBankbookPhoto(), directory, appUser);
             if (newBankbookUrl != null) {
                 targetUser.updateBankbookUrl(newBankbookUrl);
             }
-        } else if (StringUtils.hasText(dto.getBankbookPhotoUrl())) {
-            // URL 기반 요청: 새 이미지로 바꿨을 때만 기존 파일 삭제
+        } else {
+            // URL 필드 처리: null이 명시적으로 전달되면 null로 저장, 값이 있으면 값 저장
+            String newUrl = dto.getBankbookPhotoUrl();
             String existingUrl = targetUser.getBankbookUrl();
-            if (existingUrl != null && !existingUrl.equals(dto.getBankbookPhotoUrl())) {
+            if (newUrl != null && existingUrl != null && !newUrl.equals(existingUrl)) {
+                // 새 이미지로 바꿨을 때만 기존 파일 삭제
+                deleteFileIfExists(existingUrl, appUser);
+            } else if (newUrl == null && existingUrl != null) {
+                // null로 변경하려는 경우 기존 파일 삭제
                 deleteFileIfExists(existingUrl, appUser);
             }
-            targetUser.updateBankbookUrl(dto.getBankbookPhotoUrl());
+            // null이든 값이든 모두 저장 (JSON에 필드가 포함되어 있는 경우)
+            targetUser.updateBankbookUrl(newUrl);
         }
 
         // 기타 정보 갱신
@@ -598,14 +621,16 @@ public class AppUserService {
             }
         }
 
-        if (StringUtils.hasText(dto.getIdCardUrl())) {
+        // null이면 null로 저장, 값이 있으면 값 저장
+        String idCardUrl = dto.getIdCardUrl();
+        if (idCardUrl != null) {
             // 새 이미지로 바꿨을 때만 기존 파일 삭제
             String existingUrl = targetUser.getIdCardUrl();
-            if (existingUrl != null && !existingUrl.equals(dto.getIdCardUrl())) {
+            if (existingUrl != null && !existingUrl.equals(idCardUrl)) {
                 deleteFileIfExists(existingUrl, requester);
             }
-            targetUser.updateIdCardUrl(dto.getIdCardUrl());
         }
+        targetUser.updateIdCardUrl(idCardUrl);  // null이어도 저장
 
         targetUser.updateArea(area);
         appUserRepository.save(targetUser);
@@ -613,42 +638,46 @@ public class AppUserService {
 
     @Transactional(readOnly = true)
     public Object getMyInfo(AppUser appUser) {
+        // LazyInitializationException 방지를 위해 area와 section을 함께 fetch하여 다시 조회
+        AppUser userWithRelations = appUserRepository.findByIdWithAreaAndSection(appUser.getId())
+                .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND));
+
         AppUserInfoDto userDto = AppUserInfoDto.builder()
-                .id(appUser.getId())
-                .userId(appUser.getUserId())
-                .username(appUser.getUsername())
-                .role(appUser.getRole())
+                .id(userWithRelations.getId())
+                .userId(userWithRelations.getUserId())
+                .username(userWithRelations.getUsername())
+                .role(userWithRelations.getRole())
                 .build();
 
-        return switch (appUser.getRole()) {
+        return switch (userWithRelations.getRole()) {
             case ADMIN -> AdminMyInfoDto.builder()
                     .appUser(userDto)
                     .build();
 
             case VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER -> {
-                if (appUser.getArea() == null) {
+                if (userWithRelations.getArea() == null) {
                     throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
                 }
                 yield ViceAdminMyInfoDto.builder()
                         .appUser(userDto)
-                        .idCardUrl(appUser.getIdCardUrl())
-                        .area(toAreaDto(appUser.getArea()))
+                        .idCardUrl(userWithRelations.getIdCardUrl())
+                        .area(toAreaDto(userWithRelations.getArea()))
                         .build();
             }
 
             case VILLAGE_HEAD -> {
-                if (appUser.getSection() == null) {
+                if (userWithRelations.getSection() == null) {
                     throw new CustomException(ErrorValue.VILLAGE_HEAD_NOT_APPROVED);
                 }
-                Section section = appUser.getSection();
+                Section section = userWithRelations.getSection();
                 Area area = section.getArea();
                 yield VillageHeadMyInfoDto.builder()
                         .appUser(userDto)
-                        .identificationPhotoUrl(appUser.getIdentificationPhotoUrl())
-                        .bankName(appUser.getBankName())
-                        .accountInfo(appUser.getAccountInfo())
-                        .contractUrl(appUser.getContractUrl())
-                        .bankbookUrl(appUser.getBankbookUrl())
+                        .identificationPhotoUrl(userWithRelations.getIdentificationPhotoUrl())
+                        .bankName(userWithRelations.getBankName())
+                        .accountInfo(userWithRelations.getAccountInfo())
+                        .contractUrl(userWithRelations.getContractUrl())
+                        .bankbookUrl(userWithRelations.getBankbookUrl())
                         .section(toSectionDto(section))
                         .area(toAreaDto(area))
                         .build();

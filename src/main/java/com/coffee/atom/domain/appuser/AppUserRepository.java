@@ -74,4 +74,8 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
     // 지역과 역할로 부관리자 조회
     List<AppUser> findByAreaAndRole(Area area, Role role);
+
+    // 내 정보 조회용 (area와 section을 함께 fetch)
+    @Query("SELECT u FROM AppUser u LEFT JOIN FETCH u.area LEFT JOIN FETCH u.section LEFT JOIN FETCH u.section.area WHERE u.id = :id")
+    Optional<AppUser> findByIdWithAreaAndSection(@Param("id") Long id);
 }

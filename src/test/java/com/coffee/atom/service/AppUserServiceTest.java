@@ -171,6 +171,7 @@ class AppUserServiceTest {
     @Test
     void getMyInfo_viceAdmin_withoutArea_throws() {
         AppUser va = viceAdmin(2L, Role.VICE_ADMIN_HEAD_OFFICER, null);
+        when(appUserRepository.findByIdWithAreaAndSection(2L)).thenReturn(Optional.of(va));
 
         assertThatThrownBy(() -> appUserService.getMyInfo(va))
                 .isInstanceOf(CustomException.class)
@@ -180,6 +181,7 @@ class AppUserServiceTest {
     @Test
     void getMyInfo_viceAdmin_success_returnsViceAdminDto() {
         AppUser va = viceAdmin(2L, Role.VICE_ADMIN_HEAD_OFFICER, area(10L));
+        when(appUserRepository.findByIdWithAreaAndSection(2L)).thenReturn(Optional.of(va));
 
         Object result = appUserService.getMyInfo(va);
 

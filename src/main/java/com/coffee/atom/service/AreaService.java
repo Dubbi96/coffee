@@ -35,8 +35,31 @@ public class AreaService {
     }
 
     @Transactional(readOnly = true)
-    public List<AreaSectionResponseDto> getAreasWithSections() {
-        return areaRepository.findAreasWithSections().stream()
+    public List<AreaSectionResponseDto> getAreasWithSections(AppUser appUser) {
+        Role role = appUser.getRole();
+        
+        // 면장은 조회 불가
+        if (role == Role.VILLAGE_HEAD) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+        
+        List<Area> areas;
+        
+        if (role == Role.ADMIN) {
+            // 총 관리자: 모든 지역 및 섹션 조회
+            areas = areaRepository.findAreasWithSections();
+        } else if (role == Role.VICE_ADMIN_HEAD_OFFICER || role == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+            // 부 관리자: 본인이 속한 Area와 그 Area 내의 Section만 조회
+            Area userArea = appUser.getArea();
+            if (userArea == null) {
+                throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
+            }
+            areas = areaRepository.findAreaWithSections(userArea.getId());
+        } else {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+        
+        return areas.stream()
                 .sorted(Comparator.comparing(Area::getAreaName, String.CASE_INSENSITIVE_ORDER))
                 .map(area -> AreaSectionResponseDto.builder()
                         .id(area.getId())
@@ -75,7 +98,30 @@ public class AreaService {
 
     @Transactional(readOnly = true)
     public List<AreaResponseDto> getArea(AppUser appUser) {
-        return areaRepository.findAll().stream()
+        Role role = appUser.getRole();
+        
+        // 면장은 조회 불가
+        if (role == Role.VILLAGE_HEAD) {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+        
+        List<Area> areas;
+        
+        if (role == Role.ADMIN) {
+            // 총 관리자: 모든 지역 조회
+            areas = areaRepository.findAll();
+        } else if (role == Role.VICE_ADMIN_HEAD_OFFICER || role == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+            // 부 관리자: 본인이 배정된 지역만 조회
+            Area userArea = appUser.getArea();
+            if (userArea == null) {
+                throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
+            }
+            areas = List.of(userArea);
+        } else {
+            throw new CustomException(ErrorValue.UNAUTHORIZED);
+        }
+        
+        return areas.stream()
                 .sorted(Comparator.comparing(Area::getAreaName, String.CASE_INSENSITIVE_ORDER))
                 .map(area -> AreaResponseDto.builder()
                         .id(area.getId())
