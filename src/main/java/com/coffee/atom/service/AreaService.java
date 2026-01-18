@@ -116,7 +116,11 @@ public class AreaService {
             if (userArea == null) {
                 throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
             }
-            areas = List.of(userArea);
+            // Lazy proxy 초기화를 위해 필요한 필드들을 명시적으로 접근
+            Long areaId = userArea.getId();
+            Area area = areaRepository.findById(areaId)
+                    .orElseThrow(() -> new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND));
+            areas = List.of(area);
         } else {
             throw new CustomException(ErrorValue.UNAUTHORIZED);
         }
