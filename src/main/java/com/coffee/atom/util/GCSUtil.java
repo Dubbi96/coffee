@@ -244,6 +244,46 @@ public class GCSUtil {
         fileEventLogService.saveDeleteLogs(fileUrls, appUser);
     }
 
+    /**
+     * 파일 URL이 변경되었을 때만 이전 파일을 삭제하는 헬퍼 메서드
+     * 
+     * @param oldUrl 기존 파일 URL (null 가능)
+     * @param newUrl 새로운 파일 URL (null 가능)
+     * @param appUser 파일 작업을 수행하는 사용자
+     * @return 변경이 발생했는지 여부 (파일 삭제가 수행되었는지)
+     */
+    public boolean updateFileUrlIfChanged(String oldUrl, String newUrl, AppUser appUser) {
+        // oldUrl이 null이거나 비어있으면 삭제할 파일이 없음
+        if (oldUrl == null || oldUrl.isBlank()) {
+            return false;
+        }
+
+        // newUrl이 null이거나 비어있으면 파일 삭제 (null로 변경)
+        if (newUrl == null || newUrl.isBlank()) {
+            try {
+                deleteFileFromGCS(oldUrl, appUser);
+                return true;
+            } catch (Exception e) {
+                log.warn("파일 삭제 중 오류 발생 (무시): {}", oldUrl, e);
+                return false;
+            }
+        }
+
+        // oldUrl과 newUrl이 같으면 아무 작업도 하지 않음
+        if (oldUrl.equals(newUrl)) {
+            return false;
+        }
+
+        // oldUrl과 newUrl이 다르면 이전 파일 삭제
+        try {
+            deleteFileFromGCS(oldUrl, appUser);
+            return true;
+        } catch (Exception e) {
+            log.warn("파일 삭제 중 오류 발생 (무시): {}", oldUrl, e);
+            return false;
+        }
+    }
+
     public MediaType getMediaType(String fileUrl) {
         if (fileUrl == null || fileUrl.isEmpty()) {
             return MediaType.APPLICATION_OCTET_STREAM;

@@ -210,15 +210,9 @@ public class AppUserService {
 
         if (appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ||
             appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER) {
-            // null이면 null로 저장, 값이 있으면 값 저장
-            if (idCardUrl != null) {
-                // 새 이미지로 바꿨을 때만 기존 파일 삭제
-                String existingUrl = appUser.getIdCardUrl();
-                if (existingUrl != null && !existingUrl.equals(idCardUrl)) {
-                    deleteFileIfExists(existingUrl, appUser);
-                }
-            }
-            appUser.updateIdCardUrl(idCardUrl);  // null이어도 저장
+            // 파일 URL을 안전하게 업데이트 (이전 파일 자동 삭제 포함)
+            String existingUrl = appUser.getIdCardUrl();
+            updateAppUserFileUrlSafely(appUser, existingUrl, idCardUrl, appUser::updateIdCardUrl, appUser);
         }
 
         appUserRepository.save(appUser);
@@ -448,15 +442,8 @@ public class AppUserService {
             // URL 필드 처리: null이 명시적으로 전달되면 null로 저장, 값이 있으면 값 저장
             String newUrl = dto.getIdentificationPhotoUrl();
             String existingUrl = targetUser.getIdentificationPhotoUrl();
-            if (newUrl != null && existingUrl != null && !newUrl.equals(existingUrl)) {
-                // 새 이미지로 바꿨을 때만 기존 파일 삭제
-                deleteFileIfExists(existingUrl, appUser);
-            } else if (newUrl == null && existingUrl != null) {
-                // null로 변경하려는 경우 기존 파일 삭제
-                deleteFileIfExists(existingUrl, appUser);
-            }
-            // null이든 값이든 모두 저장 (JSON에 필드가 포함되어 있는 경우)
-            targetUser.updateIdentificationPhotoUrl(newUrl);
+            // 파일 URL을 안전하게 업데이트 (이전 파일 자동 삭제 포함)
+            updateAppUserFileUrlSafely(targetUser, existingUrl, newUrl, targetUser::updateIdentificationPhotoUrl, appUser);
         }
 
         // contract (파일이 있으면 파일 업로드, 없으면 URL 필드 확인 - null이 명시적으로 전달되면 null로 저장)
@@ -470,15 +457,8 @@ public class AppUserService {
             // URL 필드 처리: null이 명시적으로 전달되면 null로 저장, 값이 있으면 값 저장
             String newUrl = dto.getContractFileUrl();
             String existingUrl = targetUser.getContractUrl();
-            if (newUrl != null && existingUrl != null && !newUrl.equals(existingUrl)) {
-                // 새 이미지로 바꿨을 때만 기존 파일 삭제
-                deleteFileIfExists(existingUrl, appUser);
-            } else if (newUrl == null && existingUrl != null) {
-                // null로 변경하려는 경우 기존 파일 삭제
-                deleteFileIfExists(existingUrl, appUser);
-            }
-            // null이든 값이든 모두 저장 (JSON에 필드가 포함되어 있는 경우)
-            targetUser.updateContractUrl(newUrl);
+            // 파일 URL을 안전하게 업데이트 (이전 파일 자동 삭제 포함)
+            updateAppUserFileUrlSafely(targetUser, existingUrl, newUrl, targetUser::updateContractUrl, appUser);
         }
 
         // bankbook (파일이 있으면 파일 업로드, 없으면 URL 필드 확인 - null이 명시적으로 전달되면 null로 저장)
@@ -492,15 +472,8 @@ public class AppUserService {
             // URL 필드 처리: null이 명시적으로 전달되면 null로 저장, 값이 있으면 값 저장
             String newUrl = dto.getBankbookPhotoUrl();
             String existingUrl = targetUser.getBankbookUrl();
-            if (newUrl != null && existingUrl != null && !newUrl.equals(existingUrl)) {
-                // 새 이미지로 바꿨을 때만 기존 파일 삭제
-                deleteFileIfExists(existingUrl, appUser);
-            } else if (newUrl == null && existingUrl != null) {
-                // null로 변경하려는 경우 기존 파일 삭제
-                deleteFileIfExists(existingUrl, appUser);
-            }
-            // null이든 값이든 모두 저장 (JSON에 필드가 포함되어 있는 경우)
-            targetUser.updateBankbookUrl(newUrl);
+            // 파일 URL을 안전하게 업데이트 (이전 파일 자동 삭제 포함)
+            updateAppUserFileUrlSafely(targetUser, existingUrl, newUrl, targetUser::updateBankbookUrl, appUser);
         }
 
         // 기타 정보 갱신
@@ -621,16 +594,10 @@ public class AppUserService {
             }
         }
 
-        // null이면 null로 저장, 값이 있으면 값 저장
+        // 파일 URL을 안전하게 업데이트 (이전 파일 자동 삭제 포함)
         String idCardUrl = dto.getIdCardUrl();
-        if (idCardUrl != null) {
-            // 새 이미지로 바꿨을 때만 기존 파일 삭제
-            String existingUrl = targetUser.getIdCardUrl();
-            if (existingUrl != null && !existingUrl.equals(idCardUrl)) {
-                deleteFileIfExists(existingUrl, requester);
-            }
-        }
-        targetUser.updateIdCardUrl(idCardUrl);  // null이어도 저장
+        String existingUrl = targetUser.getIdCardUrl();
+        updateAppUserFileUrlSafely(targetUser, existingUrl, idCardUrl, targetUser::updateIdCardUrl, requester);
 
         targetUser.updateArea(area);
         appUserRepository.save(targetUser);
@@ -721,12 +688,11 @@ public class AppUserService {
             deleteFileIfExists(farmer.getIdentificationPhotoUrl(), appUser);
             identificationUrl = uploadFileIfPresent(dto.getIdentificationPhoto(), directory, appUser);
         } else if (StringUtils.hasText(dto.getIdentificationPhotoUrl())) {
-            // URL 기반 요청: 새 이미지로 바꿨을 때만 기존 파일 삭제
+            // URL 기반 요청: 파일 URL 변경 확인 및 이전 파일 삭제
             String existingUrl = farmer.getIdentificationPhotoUrl();
-            if (existingUrl != null && !existingUrl.equals(dto.getIdentificationPhotoUrl())) {
-                deleteFileIfExists(existingUrl, appUser);
-            }
-            identificationUrl = dto.getIdentificationPhotoUrl();
+            String newUrl = dto.getIdentificationPhotoUrl();
+            gcsUtil.updateFileUrlIfChanged(existingUrl, newUrl, appUser);
+            identificationUrl = newUrl;
         } else {
             // URL이 제공되지 않은 경우 기존 URL 유지
             identificationUrl = farmer.getIdentificationPhotoUrl();
@@ -803,6 +769,25 @@ public class AppUserService {
         if (fileUrl != null && !fileUrl.isBlank()) {
             gcsUtil.deleteFileFromGCS(fileUrl, appUser); // 내부에서 로그도 비동기 기록됨
         }
+    }
+
+    /**
+     * 파일 URL을 안전하게 업데이트하는 헬퍼 메서드
+     * 이전 URL과 새 URL을 비교하여 변경된 경우에만 이전 파일을 삭제하고 새 URL로 업데이트합니다.
+     * 
+     * @param appUser 업데이트할 AppUser 엔티티
+     * @param oldUrl 기존 파일 URL
+     * @param newUrl 새로운 파일 URL (null 가능)
+     * @param updateMethod 엔티티의 파일 URL을 업데이트하는 메서드 참조
+     * @param requester 파일 작업을 수행하는 사용자
+     */
+    private void updateAppUserFileUrlSafely(AppUser appUser, String oldUrl, String newUrl, 
+                                           java.util.function.Consumer<String> updateMethod, 
+                                           AppUser requester) {
+        // 파일 URL 변경 확인 및 이전 파일 삭제
+        gcsUtil.updateFileUrlIfChanged(oldUrl, newUrl, requester);
+        // 엔티티의 파일 URL 업데이트
+        updateMethod.accept(newUrl);
     }
 
     private boolean hasFile(MultipartFile file) {

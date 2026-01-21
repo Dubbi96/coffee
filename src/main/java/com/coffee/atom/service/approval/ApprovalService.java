@@ -256,6 +256,8 @@ public class ApprovalService {
 
     // 2. UPDATE 처리
     private void handleUpdateApproval(Approval approval) {
+        AppUser requester = approval.getRequester();
+        
         for (RequestedInstance instance : approval.getRequestedInstance()) {
             EntityType type = instance.getEntityType();
             Long id = instance.getInstanceId();
@@ -288,15 +290,24 @@ public class ApprovalService {
                             appUser.updateSection(section);
                         }
 
-                        // 식별 URL들 (옵셔널)
+                        // 식별 URL들 (옵셔널) - 파일 URL 변경 시 이전 파일 자동 삭제
                         if (jsonNode.has("identificationPhotoUrl") && isNonEmptyText(jsonNode.get("identificationPhotoUrl"))) {
-                            appUser.updateIdentificationPhotoUrl(jsonNode.get("identificationPhotoUrl").asText());
+                            String newUrl = jsonNode.get("identificationPhotoUrl").asText();
+                            String existingUrl = appUser.getIdentificationPhotoUrl();
+                            gcsUtil.updateFileUrlIfChanged(existingUrl, newUrl, requester);
+                            appUser.updateIdentificationPhotoUrl(newUrl);
                         }
                         if (jsonNode.has("contractFileUrl") && isNonEmptyText(jsonNode.get("contractFileUrl"))) {
-                            appUser.updateContractUrl(jsonNode.get("contractFileUrl").asText());
+                            String newUrl = jsonNode.get("contractFileUrl").asText();
+                            String existingUrl = appUser.getContractUrl();
+                            gcsUtil.updateFileUrlIfChanged(existingUrl, newUrl, requester);
+                            appUser.updateContractUrl(newUrl);
                         }
                         if (jsonNode.has("bankbookPhotoUrl") && isNonEmptyText(jsonNode.get("bankbookPhotoUrl"))) {
-                            appUser.updateBankbookUrl(jsonNode.get("bankbookPhotoUrl").asText());
+                            String newUrl = jsonNode.get("bankbookPhotoUrl").asText();
+                            String existingUrl = appUser.getBankbookUrl();
+                            gcsUtil.updateFileUrlIfChanged(existingUrl, newUrl, requester);
+                            appUser.updateBankbookUrl(newUrl);
                         }
                     }
 
@@ -312,9 +323,13 @@ public class ApprovalService {
                         farmer.updateName(jsonNode.get("name").asText());
                     }
 
-                    // 식별 이미지 URL 업데이트 (Optional)
+                    // 식별 이미지 URL 업데이트 (Optional) - 파일 URL 변경 시 이전 파일 자동 삭제
                     if (jsonNode.has("identificationPhotoUrl")) {
-                        farmer.updateIdentificationPhotoUrl(jsonNode.get("identificationPhotoUrl").asText());
+                        String newUrl = jsonNode.get("identificationPhotoUrl").asText();
+                        String existingUrl = farmer.getIdentificationPhotoUrl();
+                        // 파일 URL 변경 확인 및 이전 파일 삭제
+                        gcsUtil.updateFileUrlIfChanged(existingUrl, newUrl, requester);
+                        farmer.updateIdentificationPhotoUrl(newUrl);
                     }
 
                     // 소속 면장 변경
