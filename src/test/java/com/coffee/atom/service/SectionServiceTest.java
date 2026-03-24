@@ -3,6 +3,7 @@ package com.coffee.atom.service;
 import com.coffee.atom.config.error.CustomException;
 import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.domain.appuser.AppUser;
+import com.coffee.atom.domain.appuser.AppUserRepository;
 import com.coffee.atom.domain.appuser.Role;
 import com.coffee.atom.domain.area.Area;
 import com.coffee.atom.domain.area.AreaRepository;
@@ -17,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Collections;
 import java.util.Optional;
 
 import static com.coffee.atom.support.TestFixtures.area;
@@ -35,6 +37,9 @@ class SectionServiceTest {
 
     @Mock
     SectionRepository sectionRepository;
+
+    @Mock
+    AppUserRepository appUserRepository;
 
     @InjectMocks
     SectionService sectionService;
@@ -114,7 +119,9 @@ class SectionServiceTest {
 
     @Test
     void deleteSection_found_deletes() {
-        when(sectionRepository.findById(1L)).thenReturn(Optional.of(Section.builder().id(1L).sectionName("s").latitude(1.0).longitude(2.0).build()));
+        Section section = Section.builder().id(1L).sectionName("s").latitude(1.0).longitude(2.0).build();
+        when(sectionRepository.findById(1L)).thenReturn(Optional.of(section));
+        when(appUserRepository.findByRoleAndSection(Role.VILLAGE_HEAD, section)).thenReturn(Collections.emptyList());
 
         sectionService.deleteSection(1L);
 
