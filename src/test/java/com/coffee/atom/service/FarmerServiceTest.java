@@ -46,12 +46,12 @@ class FarmerServiceTest {
     }
 
     @Test
-    void getFarmersWithVillageHeadAndSection_viceAdmin_withoutArea_throws() {
+    void getFarmersWithVillageHeadAndSection_viceAdmin_withoutArea_returnsEmpty() {
         AppUser viceAdmin = user(2L, Role.VICE_ADMIN_HEAD_OFFICER);
 
-        assertThatThrownBy(() -> farmerService.getFarmersWithVillageHeadAndSection(viceAdmin))
-                .isInstanceOf(CustomException.class)
-                .hasMessage(ErrorValue.AREA_NOT_FOUND.getMessage());
+        List<FarmersResponseDto> result = farmerService.getFarmersWithVillageHeadAndSection(viceAdmin);
+
+        assertThat(result).isEmpty();
     }
 
     @Test

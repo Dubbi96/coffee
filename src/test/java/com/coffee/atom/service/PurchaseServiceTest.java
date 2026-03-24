@@ -152,12 +152,12 @@ class PurchaseServiceTest {
     }
 
     @Test
-    void getPurchaseList_viceAdmin_withoutArea_throws() {
+    void getPurchaseList_viceAdmin_withoutArea_returnsEmpty() {
         AppUser viceAdmin = viceAdmin(1L, Role.VICE_ADMIN_HEAD_OFFICER, null);
 
-        assertThatThrownBy(() -> purchaseService.getPurchaseList(viceAdmin, null, null, null))
-                .isInstanceOf(CustomException.class)
-                .hasMessage(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND.getMessage());
+        List<PurchaseResponseDto> result = purchaseService.getPurchaseList(viceAdmin, null, null, null);
+
+        assertThat(result).isEmpty();
     }
 }
 

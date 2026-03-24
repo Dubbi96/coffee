@@ -11,6 +11,7 @@ import com.coffee.atom.domain.area.AreaRepository;
 import com.coffee.atom.domain.area.SectionRepository;
 import com.coffee.atom.dto.appuser.SignInRequestDto;
 import com.coffee.atom.dto.appuser.SignInResponseDto;
+import com.coffee.atom.dto.appuser.ViceAdminMyInfoDto;
 import com.coffee.atom.dto.appuser.VillageHeadResponseDto;
 import com.coffee.atom.util.GCSUtil;
 import org.junit.jupiter.api.Test;
@@ -151,12 +152,12 @@ class AppUserServiceTest {
     }
 
     @Test
-    void getVillageHeads_viceAdmin_withoutArea_throws() {
+    void getVillageHeads_viceAdmin_withoutArea_returnsEmpty() {
         AppUser va = viceAdmin(2L, Role.VICE_ADMIN_HEAD_OFFICER, null);
 
-        assertThatThrownBy(() -> appUserService.getVillageHeads(va))
-                .isInstanceOf(CustomException.class)
-                .hasMessage(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND.getMessage());
+        List<VillageHeadResponseDto> result = appUserService.getVillageHeads(va);
+
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -169,13 +170,14 @@ class AppUserServiceTest {
     }
 
     @Test
-    void getMyInfo_viceAdmin_withoutArea_throws() {
+    void getMyInfo_viceAdmin_withoutArea_returnsNullArea() {
         AppUser va = viceAdmin(2L, Role.VICE_ADMIN_HEAD_OFFICER, null);
         when(appUserRepository.findByIdWithAreaAndSection(2L)).thenReturn(Optional.of(va));
 
-        assertThatThrownBy(() -> appUserService.getMyInfo(va))
-                .isInstanceOf(CustomException.class)
-                .hasMessage(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND.getMessage());
+        Object result = appUserService.getMyInfo(va);
+
+        assertThat(result).isInstanceOf(ViceAdminMyInfoDto.class);
+        assertThat(((ViceAdminMyInfoDto) result).getArea()).isNull();
     }
 
     @Test
