@@ -242,10 +242,11 @@ public class AppUserService {
         AppUser appUser = appUserRepository.findAppUserByIsApprovedAndId(Boolean.TRUE, villageHeadId)
                 .orElseThrow(() -> new CustomException(ErrorValue.ACCOUNT_NOT_FOUND));
         
-        if (appUser.getRole() != Role.VILLAGE_HEAD || appUser.getSection() == null) {
+        if (appUser.getRole() != Role.VILLAGE_HEAD) {
             throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND);
         }
 
+        Section section = appUser.getSection();
         return VillageHeadDetailResponseDto.builder()
                 .userId(appUser.getUserId())
                 .username(appUser.getUsername())
@@ -254,8 +255,8 @@ public class AppUserService {
                 .identificationPhotoUrl(appUser.getIdentificationPhotoUrl())
                 .contractFileUrl(appUser.getContractUrl())
                 .bankbookPhotoUrl(appUser.getBankbookUrl())
-                .areaInfo(VillageHeadDetailResponseDto.AreaInfo.from(appUser.getSection().getArea()))
-                .sectionInfo(VillageHeadDetailResponseDto.SectionInfo.from(appUser.getSection()))
+                .areaInfo(VillageHeadDetailResponseDto.AreaInfo.from(section != null ? section.getArea() : null))
+                .sectionInfo(VillageHeadDetailResponseDto.SectionInfo.from(section))
                 .build();
     }
 
@@ -581,17 +582,24 @@ public class AppUserService {
         targetUser.updateUserName(dto.getUsername());
         targetUser.updateUserId(dto.getUserId());
 
-        Area area = areaRepository.findById(dto.getAreaId())
-                .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND));
+        if (dto.getAreaId() == null) {
+            // 미할당 처리
+            targetUser.updateArea(null);
+        } else {
+            Area area = areaRepository.findById(dto.getAreaId())
+                    .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND));
 
-        if (targetUser.getArea() == null || !targetUser.getArea().getId().equals(area.getId())) {
-            List<AppUser> existingViceAdmins = appUserRepository.findByAreaAndRole(area, targetUser.getRole());
-            existingViceAdmins = existingViceAdmins.stream()
-                    .filter(u -> !u.getId().equals(targetUser.getId()))
-                    .toList();
-            if (!existingViceAdmins.isEmpty()) {
-                throw new CustomException(ErrorValue.VICE_ADMIN_ALREADY_EXISTS_IN_AREA);
+            if (targetUser.getArea() == null || !targetUser.getArea().getId().equals(area.getId())) {
+                List<AppUser> existingViceAdmins = appUserRepository.findByAreaAndRole(area, targetUser.getRole());
+                existingViceAdmins = existingViceAdmins.stream()
+                        .filter(u -> !u.getId().equals(targetUser.getId()))
+                        .toList();
+                if (!existingViceAdmins.isEmpty()) {
+                    throw new CustomException(ErrorValue.VICE_ADMIN_ALREADY_EXISTS_IN_AREA);
+                }
             }
+
+            targetUser.updateArea(area);
         }
 
         // 파일 URL을 안전하게 업데이트 (이전 파일 자동 삭제 포함)
@@ -599,7 +607,6 @@ public class AppUserService {
         String existingUrl = targetUser.getIdCardUrl();
         updateAppUserFileUrlSafely(targetUser, existingUrl, idCardUrl, targetUser::updateIdCardUrl, requester);
 
-        targetUser.updateArea(area);
         appUserRepository.save(targetUser);
     }
 
@@ -622,9 +629,6 @@ public class AppUserService {
                     .build();
 
             case VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER -> {
-                if (userWithRelations.getArea() == null) {
-                    throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
-                }
                 yield ViceAdminMyInfoDto.builder()
                         .appUser(userDto)
                         .idCardUrl(userWithRelations.getIdCardUrl())
@@ -633,11 +637,8 @@ public class AppUserService {
             }
 
             case VILLAGE_HEAD -> {
-                if (userWithRelations.getSection() == null) {
-                    throw new CustomException(ErrorValue.VILLAGE_HEAD_NOT_APPROVED);
-                }
                 Section section = userWithRelations.getSection();
-                Area area = section.getArea();
+                Area area = section != null ? section.getArea() : null;
                 yield VillageHeadMyInfoDto.builder()
                         .appUser(userDto)
                         .identificationPhotoUrl(userWithRelations.getIdentificationPhotoUrl())
@@ -653,6 +654,7 @@ public class AppUserService {
     }
 
     private AreaDto toAreaDto(Area area) {
+        if (area == null) return null;
         return AreaDto.builder()
                 .id(area.getId())
                 .areaName(area.getAreaName())
@@ -662,6 +664,7 @@ public class AppUserService {
     }
 
     private SectionDto toSectionDto(Section section) {
+        if (section == null) return null;
         return SectionDto.builder()
                 .id(section.getId())
                 .sectionName(section.getSectionName())

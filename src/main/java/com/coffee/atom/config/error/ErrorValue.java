@@ -87,8 +87,6 @@ public enum ErrorValue {
     WRONG_EMAIL_ADDRESS("잘못된 이메일 주소입니다."),
 
     // FK 참조 관련
-    SECTION_HAS_DEPENDENT_USERS("해당 섹션에 배정된 면장이 존재하여 삭제할 수 없습니다."),
-    AREA_HAS_DEPENDENT_USERS("해당 지역에 배정된 사용자가 존재하여 삭제할 수 없습니다."),
     APP_USER_HAS_DEPENDENT_RECORDS("해당 사용자를 참조하는 데이터가 존재하여 삭제할 수 없습니다.");
 
     private final String message;

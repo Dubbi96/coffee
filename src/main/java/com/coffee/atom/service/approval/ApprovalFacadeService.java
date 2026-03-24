@@ -234,7 +234,7 @@ public class ApprovalFacadeService {
         dto.setLatitude(section.getLatitude());
         dto.setLongitude(section.getLongitude());
         dto.setSectionName(section.getSectionName());
-        dto.setAreaId(section.getArea().getId());
+        dto.setAreaId(section.getArea() != null ? section.getArea().getId() : null);
 
         approvalService.requestApproval(
                 requester,

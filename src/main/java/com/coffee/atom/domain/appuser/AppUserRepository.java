@@ -57,11 +57,11 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     List<VillageHeadResponseDto> findAllVillageHeadsWithFarmerCountByAreaId(@Param("areaId") Long areaId);
 
     // 부관리자 목록 조회 (지역 포함)
-    @Query("SELECT u FROM AppUser u JOIN FETCH u.area WHERE u.role IN :roles")
+    @Query("SELECT u FROM AppUser u LEFT JOIN FETCH u.area WHERE u.role IN :roles")
     List<AppUser> findAllViceAdminsWithArea(@Param("roles") List<Role> roles);
 
     // 부관리자 상세 조회 (지역 포함)
-    @Query("SELECT u FROM AppUser u JOIN FETCH u.area WHERE u.id = :id AND u.role IN :roles")
+    @Query("SELECT u FROM AppUser u LEFT JOIN FETCH u.area WHERE u.id = :id AND u.role IN :roles")
     Optional<AppUser> findViceAdminByIdWithArea(@Param("id") Long id, @Param("roles") List<Role> roles);
 
     // 지역 ID로 부관리자 사용자 ID 목록 조회

@@ -54,9 +54,10 @@ public class AreaService {
             // 부 관리자: 본인이 속한 Area와 그 Area 내의 Section만 조회
             Area userArea = appUser.getArea();
             if (userArea == null) {
-                throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
+                areas = List.of();
+            } else {
+                areas = areaRepository.findAreaWithSections(userArea.getId());
             }
-            areas = areaRepository.findAreaWithSections(userArea.getId());
         } else {
             throw new CustomException(ErrorValue.UNAUTHORIZED);
         }
@@ -116,13 +117,14 @@ public class AreaService {
             // 부 관리자: 본인이 배정된 지역만 조회
             Area userArea = appUser.getArea();
             if (userArea == null) {
-                throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
+                areas = List.of();
+            } else {
+                // Lazy proxy 초기화를 위해 필요한 필드들을 명시적으로 접근
+                Long areaId = userArea.getId();
+                Area area = areaRepository.findById(areaId)
+                        .orElseThrow(() -> new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND));
+                areas = List.of(area);
             }
-            // Lazy proxy 초기화를 위해 필요한 필드들을 명시적으로 접근
-            Long areaId = userArea.getId();
-            Area area = areaRepository.findById(areaId)
-                    .orElseThrow(() -> new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND));
-            areas = List.of(area);
         } else {
             throw new CustomException(ErrorValue.UNAUTHORIZED);
         }
@@ -176,19 +178,18 @@ public class AreaService {
         Area area = areaRepository.findById(areaId)
                 .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
 
-        // Area를 참조하는 부관리자 체크
-        boolean hasViceAdmins =
-                !appUserRepository.findByAreaAndRole(area, Role.VICE_ADMIN_HEAD_OFFICER).isEmpty() ||
-                !appUserRepository.findByAreaAndRole(area, Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER).isEmpty();
-        if (hasViceAdmins) {
-            throw new CustomException(ErrorValue.AREA_HAS_DEPENDENT_USERS);
+        // Area를 참조하는 부관리자들의 area를 미할당(null)으로 해제
+        List<AppUser> viceAdmins = appUserRepository.findByAreaAndRole(area, Role.VICE_ADMIN_HEAD_OFFICER);
+        viceAdmins.addAll(appUserRepository.findByAreaAndRole(area, Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER));
+        for (AppUser viceAdmin : viceAdmins) {
+            viceAdmin.updateArea(null);
         }
 
-        // Area 하위 Section을 참조하는 면장 체크
+        // Area 하위 Section을 참조하는 면장들의 section을 미할당(null)으로 해제
         for (Section section : area.getSections()) {
             List<AppUser> dependentUsers = appUserRepository.findByRoleAndSection(Role.VILLAGE_HEAD, section);
-            if (!dependentUsers.isEmpty()) {
-                throw new CustomException(ErrorValue.AREA_HAS_DEPENDENT_USERS);
+            for (AppUser user : dependentUsers) {
+                user.updateSection(null);
             }
         }
 

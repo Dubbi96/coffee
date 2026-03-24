@@ -83,9 +83,10 @@ public class SectionService {
     public void deleteSection(Long sectionId) {
         Section section = sectionRepository.findById(sectionId).orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
 
+        // 의존 면장들의 section을 미할당(null)으로 해제
         List<AppUser> dependentUsers = appUserRepository.findByRoleAndSection(Role.VILLAGE_HEAD, section);
-        if (!dependentUsers.isEmpty()) {
-            throw new CustomException(ErrorValue.SECTION_HAS_DEPENDENT_USERS);
+        for (AppUser user : dependentUsers) {
+            user.updateSection(null);
         }
 
         sectionRepository.deleteById(sectionId);

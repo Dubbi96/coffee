@@ -27,6 +27,7 @@ public class VillageHeadDetailResponseDto {
         private String areaName;
 
         public static VillageHeadDetailResponseDto.AreaInfo from(Area area){
+            if (area == null) return null;
             return VillageHeadDetailResponseDto.AreaInfo.builder()
                     .areaId(area.getId())
                     .longitude(area.getLongitude())
@@ -45,6 +46,7 @@ public class VillageHeadDetailResponseDto {
         private String sectionName;
 
         public static VillageHeadDetailResponseDto.SectionInfo from(Section section){
+            if (section == null) return null;
             return SectionInfo.builder()
                     .sectionId(section.getId())
                     .longitude(section.getLongitude())

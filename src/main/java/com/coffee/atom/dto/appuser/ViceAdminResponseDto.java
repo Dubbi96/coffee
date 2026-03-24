@@ -28,6 +28,7 @@ public class ViceAdminResponseDto {
         private Double longitude;
 
         public static AreaInfo from(Area area) {
+            if (area == null) return null;
             return AreaInfo.builder()
                     .areaId(area.getId())
                     .areaName(area.getAreaName())

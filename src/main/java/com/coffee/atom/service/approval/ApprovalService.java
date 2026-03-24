@@ -476,10 +476,10 @@ public class ApprovalService {
                 case SECTION -> {
                     Section section = sectionRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
 
-                    // FK 참조 체크: 해당 Section에 배정된 면장 확인
+                    // 의존 면장들의 section을 미할당(null)으로 해제
                     List<AppUser> dependentUsers = appUserRepository.findByRoleAndSection(Role.VILLAGE_HEAD, section);
-                    if (!dependentUsers.isEmpty()) {
-                        throw new CustomException(ErrorValue.SECTION_HAS_DEPENDENT_USERS);
+                    for (AppUser user : dependentUsers) {
+                        user.updateSection(null);
                     }
 
                     sectionRepository.deleteById(id);
