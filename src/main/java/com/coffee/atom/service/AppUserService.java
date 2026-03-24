@@ -227,7 +227,7 @@ public class AppUserService {
         }
         else if (role.equals(Role.VICE_ADMIN_HEAD_OFFICER) || role.equals(Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER)) {
             if (appUser.getArea() == null) {
-                throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
+                return List.of();
             }
             Long areaId = appUser.getArea().getId();
             return appUserRepository.findAllVillageHeadsWithFarmerCountByAreaId(areaId);

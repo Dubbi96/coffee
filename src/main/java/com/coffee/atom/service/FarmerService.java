@@ -28,7 +28,7 @@ public class FarmerService {
             }
             case VICE_ADMIN_HEAD_OFFICER, VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER -> {
                 if (currentUser.getArea() == null) {
-                    throw new CustomException(ErrorValue.AREA_NOT_FOUND);
+                    return List.of();
                 }
                 return farmerRepository.findAllByAreaId(currentUser.getArea().getId());
             }

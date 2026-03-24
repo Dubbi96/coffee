@@ -147,12 +147,14 @@ public class ApprovalService {
             case VICE_ADMIN_HEAD_OFFICER -> {
                 // 나 또는 같은 Area의 농림부 부관리자 요청만
                 if (appUser.getArea() == null) {
-                    throw new CustomException(ErrorValue.AREA_NOT_FOUND);
+                    // 미할당 상태: 본인이 요청한 것만 조회
+                    spec = spec.and((root, query, cb) -> cb.equal(root.get("requester"), appUser));
+                } else {
+                    Long areaId = appUser.getArea().getId();
+                    List<Role> viceAdminRoles = List.of(Role.VICE_ADMIN_HEAD_OFFICER, Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER);
+                    List<Long> requesterIds = appUserRepository.findViceAdminUserIdsByAreaId(areaId, viceAdminRoles);
+                    spec = spec.and((root, query, cb) -> root.get("requester").get("id").in(requesterIds));
                 }
-                Long areaId = appUser.getArea().getId();
-                List<Role> viceAdminRoles = List.of(Role.VICE_ADMIN_HEAD_OFFICER, Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER);
-                List<Long> requesterIds = appUserRepository.findViceAdminUserIdsByAreaId(areaId, viceAdminRoles);
-                spec = spec.and((root, query, cb) -> root.get("requester").get("id").in(requesterIds));
             }
             case VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER ->
                     spec = spec.and((root, query, cb) -> cb.equal(root.get("requester"), appUser));
