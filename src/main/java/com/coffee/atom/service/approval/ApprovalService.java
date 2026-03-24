@@ -423,7 +423,17 @@ public class ApprovalService {
                 case APP_USER -> {
                     AppUser appUser = appUserRepository.findById(id)
                             .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
-                    
+
+                    // FK 참조 체크: 면장인 경우 Farmer, Purchase 참조 확인
+                    if (appUser.getRole() == Role.VILLAGE_HEAD) {
+                        if (!farmerRepository.findAllByVillageHeadId(appUser.getId()).isEmpty()) {
+                            throw new CustomException(ErrorValue.APP_USER_HAS_DEPENDENT_RECORDS);
+                        }
+                        if (!purchaseRepository.findByIsApprovedTrueAndVillageHead_IdOrderByPurchaseDateDesc(appUser.getId()).isEmpty()) {
+                            throw new CustomException(ErrorValue.APP_USER_HAS_DEPENDENT_RECORDS);
+                        }
+                    }
+
                     // GCS 파일 삭제
                     List<String> fileUrlsToDelete = new ArrayList<>();
                     if (appUser.getRole() == Role.VILLAGE_HEAD) {
@@ -444,27 +454,34 @@ public class ApprovalService {
                             fileUrlsToDelete.add(appUser.getIdCardUrl());
                         }
                     }
-                    
+
                     // GCS에서 파일 삭제
                     if (!fileUrlsToDelete.isEmpty()) {
                         gcsUtil.deleteFileFromGCS(fileUrlsToDelete, requester);
                     }
-                    
+
                     appUserRepository.deleteById(id);
                 }
                 case FARMER -> {
                     Farmer farmer = farmerRepository.findById(id)
                             .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
-                    
+
                     // GCS 파일 삭제: identificationPhotoUrl
                     if (StringUtils.hasText(farmer.getIdentificationPhotoUrl())) {
                         gcsUtil.deleteFileFromGCS(farmer.getIdentificationPhotoUrl(), requester);
                     }
-                    
+
                     farmerRepository.deleteById(id);
                 }
                 case SECTION -> {
-                    sectionRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
+                    Section section = sectionRepository.findById(id).orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
+
+                    // FK 참조 체크: 해당 Section에 배정된 면장 확인
+                    List<AppUser> dependentUsers = appUserRepository.findByRoleAndSection(Role.VILLAGE_HEAD, section);
+                    if (!dependentUsers.isEmpty()) {
+                        throw new CustomException(ErrorValue.SECTION_HAS_DEPENDENT_USERS);
+                    }
+
                     sectionRepository.deleteById(id);
                 }
                 case PURCHASE -> {
@@ -528,7 +545,16 @@ public class ApprovalService {
             switch (type) {
                 case APP_USER -> appUserRepository.deleteById(id);
                 case FARMER -> farmerRepository.deleteById(id);
-                case SECTION -> sectionRepository.deleteById(id);
+                case SECTION -> {
+                    // FK 참조 해제: 해당 Section을 참조하는 면장의 section을 null로 설정
+                    sectionRepository.findById(id).ifPresent(section -> {
+                        List<AppUser> dependentUsers = appUserRepository.findByRoleAndSection(Role.VILLAGE_HEAD, section);
+                        for (AppUser user : dependentUsers) {
+                            user.updateSection(null);
+                        }
+                    });
+                    sectionRepository.deleteById(id);
+                }
                 case PURCHASE -> purchaseRepository.deleteById(id);
                 default -> throw new UnsupportedOperationException("삭제 불가 엔티티입니다: " + type);
             }

@@ -84,7 +84,12 @@ public enum ErrorValue {
     WRONG_EMAIL("잘못된 양식의 이메일입니다."),
     RETRY_WITH_KAKAO("카카오 소셜로그인을 이용해주세요."),
     RETRY_WITH_APPLE("애플 소셜로그인을 이용해주세요."),
-    WRONG_EMAIL_ADDRESS("잘못된 이메일 주소입니다.");
+    WRONG_EMAIL_ADDRESS("잘못된 이메일 주소입니다."),
+
+    // FK 참조 관련
+    SECTION_HAS_DEPENDENT_USERS("해당 섹션에 배정된 면장이 존재하여 삭제할 수 없습니다."),
+    AREA_HAS_DEPENDENT_USERS("해당 지역에 배정된 사용자가 존재하여 삭제할 수 없습니다."),
+    APP_USER_HAS_DEPENDENT_RECORDS("해당 사용자를 참조하는 데이터가 존재하여 삭제할 수 없습니다.");
 
     private final String message;
 

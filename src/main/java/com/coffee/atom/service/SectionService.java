@@ -3,6 +3,7 @@ package com.coffee.atom.service;
 import com.coffee.atom.config.error.CustomException;
 import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.domain.appuser.AppUser;
+import com.coffee.atom.domain.appuser.AppUserRepository;
 import com.coffee.atom.domain.appuser.Role;
 import com.coffee.atom.domain.area.Area;
 import com.coffee.atom.domain.area.AreaRepository;
@@ -16,11 +17,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class SectionService {
     private final AreaRepository areaRepository;
     private final SectionRepository sectionRepository;
+    private final AppUserRepository appUserRepository;
 
     @Transactional
     public ApprovalSectionRequestDto requestApprovalToCreateSection(AppUser requester, ApprovalSectionRequestDto approvalSectionRequestDto) {
@@ -77,7 +81,13 @@ public class SectionService {
 
     @Transactional
     public void deleteSection(Long sectionId) {
-        sectionRepository.findById(sectionId).orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
+        Section section = sectionRepository.findById(sectionId).orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
+
+        List<AppUser> dependentUsers = appUserRepository.findByRoleAndSection(Role.VILLAGE_HEAD, section);
+        if (!dependentUsers.isEmpty()) {
+            throw new CustomException(ErrorValue.SECTION_HAS_DEPENDENT_USERS);
+        }
+
         sectionRepository.deleteById(sectionId);
     }
 

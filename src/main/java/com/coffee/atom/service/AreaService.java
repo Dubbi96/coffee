@@ -3,6 +3,7 @@ package com.coffee.atom.service;
 import com.coffee.atom.config.error.CustomException;
 import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.domain.appuser.AppUser;
+import com.coffee.atom.domain.appuser.AppUserRepository;
 import com.coffee.atom.domain.appuser.Role;
 import com.coffee.atom.domain.area.Area;
 import com.coffee.atom.domain.area.AreaRepository;
@@ -22,6 +23,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AreaService {
     private final AreaRepository areaRepository;
+    private final AppUserRepository appUserRepository;
 
     @Transactional
     public void saveArea(AppUser appUser, AreaRequestDto areaRequestDto) {
@@ -173,6 +175,22 @@ public class AreaService {
 
         Area area = areaRepository.findById(areaId)
                 .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
+
+        // Area를 참조하는 부관리자 체크
+        boolean hasViceAdmins =
+                !appUserRepository.findByAreaAndRole(area, Role.VICE_ADMIN_HEAD_OFFICER).isEmpty() ||
+                !appUserRepository.findByAreaAndRole(area, Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER).isEmpty();
+        if (hasViceAdmins) {
+            throw new CustomException(ErrorValue.AREA_HAS_DEPENDENT_USERS);
+        }
+
+        // Area 하위 Section을 참조하는 면장 체크
+        for (Section section : area.getSections()) {
+            List<AppUser> dependentUsers = appUserRepository.findByRoleAndSection(Role.VILLAGE_HEAD, section);
+            if (!dependentUsers.isEmpty()) {
+                throw new CustomException(ErrorValue.AREA_HAS_DEPENDENT_USERS);
+            }
+        }
 
         areaRepository.delete(area);
     }
