@@ -50,6 +50,9 @@ public class AppUser {
     @Column(name = "is_approved")
     private Boolean isApproved;
 
+    @Column(name = "is_deleted")
+    private Boolean isDeleted;
+
     // 부관리자용 필드
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "area_id")
@@ -103,6 +106,10 @@ public class AppUser {
 
     public void approveInstance() {
         this.isApproved = true;
+    }
+
+    public void softDelete() {
+        this.isDeleted = true;
     }
 
     // 부관리자 필드 업데이트 메서드

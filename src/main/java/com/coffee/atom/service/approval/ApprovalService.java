@@ -426,43 +426,8 @@ public class ApprovalService {
                     AppUser appUser = appUserRepository.findById(id)
                             .orElseThrow(() -> new CustomException(ErrorValue.SUBJECT_NOT_FOUND));
 
-                    // FK 참조 체크: 면장인 경우 Farmer, Purchase 참조 확인
-                    if (appUser.getRole() == Role.VILLAGE_HEAD) {
-                        if (!farmerRepository.findAllByVillageHeadId(appUser.getId()).isEmpty()) {
-                            throw new CustomException(ErrorValue.APP_USER_HAS_DEPENDENT_RECORDS);
-                        }
-                        if (!purchaseRepository.findByIsApprovedTrueAndVillageHead_IdOrderByPurchaseDateDesc(appUser.getId()).isEmpty()) {
-                            throw new CustomException(ErrorValue.APP_USER_HAS_DEPENDENT_RECORDS);
-                        }
-                    }
-
-                    // GCS 파일 삭제
-                    List<String> fileUrlsToDelete = new ArrayList<>();
-                    if (appUser.getRole() == Role.VILLAGE_HEAD) {
-                        // 면장의 경우: identificationPhotoUrl, contractUrl, bankbookUrl 삭제
-                        if (StringUtils.hasText(appUser.getIdentificationPhotoUrl())) {
-                            fileUrlsToDelete.add(appUser.getIdentificationPhotoUrl());
-                        }
-                        if (StringUtils.hasText(appUser.getContractUrl())) {
-                            fileUrlsToDelete.add(appUser.getContractUrl());
-                        }
-                        if (StringUtils.hasText(appUser.getBankbookUrl())) {
-                            fileUrlsToDelete.add(appUser.getBankbookUrl());
-                        }
-                    } else if (appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER ||
-                               appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
-                        // 부관리자의 경우: idCardUrl 삭제
-                        if (StringUtils.hasText(appUser.getIdCardUrl())) {
-                            fileUrlsToDelete.add(appUser.getIdCardUrl());
-                        }
-                    }
-
-                    // GCS에서 파일 삭제
-                    if (!fileUrlsToDelete.isEmpty()) {
-                        gcsUtil.deleteFileFromGCS(fileUrlsToDelete, requester);
-                    }
-
-                    appUserRepository.deleteById(id);
+                    // 소프트 삭제 (FK 참조 유지하여 이력 보존)
+                    appUser.softDelete();
                 }
                 case FARMER -> {
                     Farmer farmer = farmerRepository.findById(id)
@@ -546,7 +511,7 @@ public class ApprovalService {
             Long id = instance.getInstanceId();
 
             switch (type) {
-                case APP_USER -> appUserRepository.deleteById(id);
+                case APP_USER -> appUserRepository.findById(id).ifPresent(AppUser::softDelete);
                 case FARMER -> farmerRepository.deleteById(id);
                 case SECTION -> {
                     // FK 참조 해제: 해당 Section을 참조하는 면장의 section을 null로 설정

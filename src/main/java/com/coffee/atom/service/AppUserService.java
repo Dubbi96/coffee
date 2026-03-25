@@ -5,8 +5,6 @@ import com.coffee.atom.config.error.ErrorValue;
 import com.coffee.atom.config.security.JwtProvider;
 import com.coffee.atom.domain.Farmer;
 import com.coffee.atom.domain.FarmerRepository;
-import com.coffee.atom.domain.PurchaseRepository;
-import com.coffee.atom.domain.approval.Approval;
 import com.coffee.atom.domain.appuser.*;
 import com.coffee.atom.domain.area.Area;
 import com.coffee.atom.domain.area.AreaRepository;
@@ -41,8 +39,6 @@ public class AppUserService {
     private final GCSUtil gcsUtil;
     private final FarmerRepository farmerRepository;
     private final AreaRepository areaRepository;
-    private final PurchaseRepository purchaseRepository;
-    private final com.coffee.atom.domain.approval.ApprovalRepository approvalRepository;
     private final com.coffee.atom.config.EnvironmentProvider environmentProvider;
     private static final int USER_ID_MAX_LENGTH = 50;
     private static final int USERNAME_MAX_LENGTH = 50;
@@ -311,25 +307,12 @@ public class AppUserService {
             throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND);
         }
 
-        // Purchase 참조 확인 (manager_id는 NOT NULL이므로 삭제 차단)
-        if (!purchaseRepository.findByIsApprovedTrueAndManager_IdOrderByPurchaseDateDesc(viceAdminId).isEmpty()) {
-            throw new CustomException(ErrorValue.APP_USER_HAS_DEPENDENT_RECORDS);
+        if (targetUser.getIsDeleted() != null && targetUser.getIsDeleted()) {
+            throw new CustomException(ErrorValue.ACCOUNT_NOT_FOUND);
         }
 
-        // Approval 참조 해제 (approver/requester → null)
-        for (Approval approval : approvalRepository.findByApprover(targetUser)) {
-            approval.setApprover(null);
-        }
-        for (Approval approval : approvalRepository.findByRequester(targetUser)) {
-            approval.setRequester(null);
-        }
-
-        // GCS 파일 삭제
-        if (StringUtils.hasText(targetUser.getIdCardUrl())) {
-            gcsUtil.deleteFileFromGCS(targetUser.getIdCardUrl(), requester);
-        }
-
-        appUserRepository.delete(targetUser);
+        targetUser.softDelete();
+        appUserRepository.save(targetUser);
     }
 
     @Transactional
