@@ -110,6 +110,10 @@ public class AppUser {
 
     public void softDelete() {
         this.isDeleted = true;
+        // unique constraint 회피: 삭제된 계정의 userId/username에 suffix 추가
+        String deletedSuffix = "_deleted_" + this.id;
+        this.userId = this.userId + deletedSuffix;
+        this.username = this.username + deletedSuffix;
     }
 
     // 부관리자 필드 업데이트 메서드
