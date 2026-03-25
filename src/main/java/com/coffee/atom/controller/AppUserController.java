@@ -181,6 +181,13 @@ public class AppUserController {
         appUserService.updateViceAdminWithUrl(viceAdminId, appUser, dto);
     }
 
+    @DeleteMapping("/vice-admin/{viceAdminId}")
+    @Operation(summary = "부 관리자 삭제 1️⃣ 총 관리자", description = "<b>부 관리자 삭제</b><br>총 관리자만 사용 가능<br>매입 기록이 존재하는 부 관리자는 삭제 불가")
+    public void deleteViceAdmin(@PathVariable("viceAdminId") Long viceAdminId,
+                                @LoginAppUser AppUser appUser) {
+        appUserService.deleteViceAdmin(viceAdminId, appUser);
+    }
+
     @GetMapping("/my")
     @Operation(summary = "내 정보 조회", description = "<b>로그인한 유저의 정보를 Role에 따라 조회</b><br>AppUser 정보는 공통으로 포함됨")
     public Object getMyInfo(@LoginAppUser AppUser appUser) {
