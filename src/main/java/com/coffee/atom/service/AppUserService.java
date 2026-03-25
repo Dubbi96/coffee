@@ -86,35 +86,36 @@ public class AppUserService {
                 .isApproved(Boolean.TRUE);
 
         if (dto.getRole() == Role.VICE_ADMIN_HEAD_OFFICER || dto.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
-            Area area = areaRepository.findById(dto.getAreaId())
-                    .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND));
-            
-            // 한 Area에는 각 권한당 한 명씩만 할당 가능
-            List<AppUser> existingViceAdmins = appUserRepository.findByAreaAndRole(area, dto.getRole());
-            if (!existingViceAdmins.isEmpty()) {
-                throw new CustomException(ErrorValue.VICE_ADMIN_ALREADY_EXISTS_IN_AREA);
-            }
-            
             String idCardUrl = (dto.getIdCardFile() != null) ? uploadFileIfPresent(dto.getIdCardFile(),"vice-admin/", requester) : null;
-            
-            userBuilder.area(area)
-                    .idCardUrl(idCardUrl);
+            userBuilder.idCardUrl(idCardUrl);
+
+            if (dto.getAreaId() != null) {
+                Area area = areaRepository.findById(dto.getAreaId())
+                        .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND));
+                List<AppUser> existingViceAdmins = appUserRepository.findByAreaAndRole(area, dto.getRole());
+                if (!existingViceAdmins.isEmpty()) {
+                    throw new CustomException(ErrorValue.VICE_ADMIN_ALREADY_EXISTS_IN_AREA);
+                }
+                userBuilder.area(area);
+            }
         }
 
         if (dto.getRole() == Role.VILLAGE_HEAD) {
-            Section section = sectionRepository.findById(dto.getSectionId())
-                    .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
-
             String idUrl = (dto.getIdentificationPhotoFile() != null) ? uploadFileIfPresent(dto.getIdentificationPhotoFile() , "village-head/", requester) : null;
             String contractUrl = (dto.getContractFile() != null) ? uploadFileIfPresent(dto.getContractFile(), "village-head/", requester) : null;
             String bankbookUrl = (dto.getBankbookFile() != null) ? uploadFileIfPresent(dto.getBankbookFile(), "village-head/", requester) : null;
 
-            userBuilder.section(section)
-                    .bankName(dto.getBankName())
+            userBuilder.bankName(dto.getBankName())
                     .accountInfo(dto.getAccountInfo())
                     .identificationPhotoUrl(idUrl)
                     .contractUrl(contractUrl)
                     .bankbookUrl(bankbookUrl);
+
+            if (dto.getSectionId() != null) {
+                Section section = sectionRepository.findById(dto.getSectionId())
+                        .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
+                userBuilder.section(section);
+            }
         }
 
         AppUser newUser = userBuilder.build();
@@ -145,32 +146,31 @@ public class AppUserService {
                 .isApproved(Boolean.TRUE);
 
         if (dto.getRole() == Role.VICE_ADMIN_HEAD_OFFICER || dto.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
-            if (dto.getAreaId() == null) {
-                throw new CustomException(ErrorValue.AREA_NOT_FOUND);
-            }
-            Area area = areaRepository.findById(dto.getAreaId())
-                    .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND));
+            userBuilder.idCardUrl(dto.getIdentificationPhotoUrl());
 
-            List<AppUser> existingViceAdmins = appUserRepository.findByAreaAndRole(area, dto.getRole());
-            if (!existingViceAdmins.isEmpty()) {
-                throw new CustomException(ErrorValue.VICE_ADMIN_ALREADY_EXISTS_IN_AREA);
+            if (dto.getAreaId() != null) {
+                Area area = areaRepository.findById(dto.getAreaId())
+                        .orElseThrow(() -> new CustomException(ErrorValue.AREA_NOT_FOUND));
+                List<AppUser> existingViceAdmins = appUserRepository.findByAreaAndRole(area, dto.getRole());
+                if (!existingViceAdmins.isEmpty()) {
+                    throw new CustomException(ErrorValue.VICE_ADMIN_ALREADY_EXISTS_IN_AREA);
+                }
+                userBuilder.area(area);
             }
-
-            // URL만 저장
-            userBuilder.area(area)
-                    .idCardUrl(dto.getIdentificationPhotoUrl());
         }
 
         if (dto.getRole() == Role.VILLAGE_HEAD) {
-            Section section = sectionRepository.findById(dto.getSectionId())
-                    .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
-
-            userBuilder.section(section)
-                    .bankName(dto.getBankName())
+            userBuilder.bankName(dto.getBankName())
                     .accountInfo(dto.getAccountInfo())
                     .identificationPhotoUrl(dto.getIdentificationPhotoUrl())
                     .contractUrl(dto.getContractFileUrl())
                     .bankbookUrl(dto.getBankbookPhotoUrl());
+
+            if (dto.getSectionId() != null) {
+                Section section = sectionRepository.findById(dto.getSectionId())
+                        .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
+                userBuilder.section(section);
+            }
         }
 
         AppUser newUser = userBuilder.build();
@@ -322,22 +322,25 @@ public class AppUserService {
                 ? uploadFileIfPresent(approvalVillageHeadRequestDto.getBankbookPhoto(), directory, appUser)
                 : approvalVillageHeadRequestDto.getBankbookPhotoUrl();
 
-        Section section = sectionRepository.findById(approvalVillageHeadRequestDto.getSectionId())
-                        .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
-        if(!section.getIsApproved()) throw new CustomException(ErrorValue.SECTION_NOT_APPROVED);
-        
-        // 부관리자의 경우 본인이 배정된 지역의 섹션으로만 면장 생성 가능
-        if (appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER || 
-            appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
-            if (appUser.getArea() == null) {
-                throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
-            }
-            if (section.getArea() == null ||
-                !section.getArea().getId().equals(appUser.getArea().getId())) {
-                throw new CustomException(ErrorValue.AREA_SECTION_MISMATCH);
+        Section section = null;
+        if (approvalVillageHeadRequestDto.getSectionId() != null) {
+            section = sectionRepository.findById(approvalVillageHeadRequestDto.getSectionId())
+                    .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
+            if(!section.getIsApproved()) throw new CustomException(ErrorValue.SECTION_NOT_APPROVED);
+
+            // 부관리자의 경우 본인이 배정된 지역의 섹션으로만 면장 생성 가능
+            if (appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER ||
+                appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+                if (appUser.getArea() == null) {
+                    throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
+                }
+                if (section.getArea() == null ||
+                    !section.getArea().getId().equals(appUser.getArea().getId())) {
+                    throw new CustomException(ErrorValue.AREA_SECTION_MISMATCH);
+                }
             }
         }
-        
+
         AppUser newUser = AppUser.builder()
                 .userId(approvalVillageHeadRequestDto.getUserId())
                 .username(approvalVillageHeadRequestDto.getUsername())
@@ -486,24 +489,28 @@ public class AppUserService {
         }
 
         // Section 갱신
-        Section section = sectionRepository.findById(dto.getSectionId())
-                .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
-        if (!Boolean.TRUE.equals(section.getIsApproved()))
-            throw new CustomException(ErrorValue.SECTION_NOT_FOUND);
-        
-        // 부관리자의 경우 본인이 배정된 지역의 섹션으로만 배정 가능
-        if (appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER || 
-            appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
-            if (appUser.getArea() == null) {
-                throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
+        if (dto.getSectionId() == null) {
+            targetUser.updateSection(null);
+        } else {
+            Section section = sectionRepository.findById(dto.getSectionId())
+                    .orElseThrow(() -> new CustomException(ErrorValue.SECTION_NOT_FOUND));
+            if (!Boolean.TRUE.equals(section.getIsApproved()))
+                throw new CustomException(ErrorValue.SECTION_NOT_FOUND);
+
+            // 부관리자의 경우 본인이 배정된 지역의 섹션으로만 배정 가능
+            if (appUser.getRole() == Role.VICE_ADMIN_HEAD_OFFICER ||
+                appUser.getRole() == Role.VICE_ADMIN_AGRICULTURE_MINISTRY_OFFICER) {
+                if (appUser.getArea() == null) {
+                    throw new CustomException(ErrorValue.VICE_ADMIN_INFO_NOT_FOUND);
+                }
+                if (section.getArea() == null ||
+                    !section.getArea().getId().equals(appUser.getArea().getId())) {
+                    throw new CustomException(ErrorValue.VILLAGE_HEAD_SECTION_ASSIGN_MISMATCH);
+                }
             }
-            if (section.getArea() == null ||
-                !section.getArea().getId().equals(appUser.getArea().getId())) {
-                throw new CustomException(ErrorValue.VILLAGE_HEAD_SECTION_ASSIGN_MISMATCH);
-            }
+
+            targetUser.updateSection(section);
         }
-        
-        targetUser.updateSection(section);
 
         appUserRepository.save(targetUser);
 

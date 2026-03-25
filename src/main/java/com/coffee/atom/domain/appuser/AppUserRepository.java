@@ -36,7 +36,7 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
            "LEFT JOIN Farmer f ON f.villageHead.id = u.id AND f.isApproved = true " +
            "WHERE u.role = com.coffee.atom.domain.appuser.Role.VILLAGE_HEAD " +
            "AND u.isApproved = true " +
-           "AND s.isApproved = true " +
+           "AND (s IS NULL OR s.isApproved = true) " +
            "GROUP BY u.id, u.userId, u.username, s.sectionName, area.id, area.longitude, area.latitude, area.areaName, s.id, s.longitude, s.latitude")
     List<VillageHeadResponseDto> findAllVillageHeadsWithFarmerCountForAdmin();
 
@@ -49,10 +49,10 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
            "LEFT JOIN u.section s " +
            "LEFT JOIN s.area area " +
            "LEFT JOIN Farmer f ON f.villageHead.id = u.id AND f.isApproved = true " +
-           "WHERE area.id = :areaId " +
+           "WHERE (area.id = :areaId OR s IS NULL) " +
            "AND u.role = com.coffee.atom.domain.appuser.Role.VILLAGE_HEAD " +
            "AND u.isApproved = true " +
-           "AND s.isApproved = true " +
+           "AND (s IS NULL OR s.isApproved = true) " +
            "GROUP BY u.id, u.userId, u.username, s.sectionName, area.id, area.longitude, area.latitude, area.areaName, s.id, s.longitude, s.latitude")
     List<VillageHeadResponseDto> findAllVillageHeadsWithFarmerCountByAreaId(@Param("areaId") Long areaId);
 

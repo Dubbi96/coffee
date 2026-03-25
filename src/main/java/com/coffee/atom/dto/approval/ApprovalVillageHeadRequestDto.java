@@ -1,8 +1,6 @@
 package com.coffee.atom.dto.approval;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -46,8 +44,6 @@ public class ApprovalVillageHeadRequestDto {
     @Size(max = 2048, message = "URL은 2048자 이하여야 합니다")
     private String bankbookPhotoUrl;
     
-    @NotNull(message = "Section ID는 필수입니다")
-    @Positive(message = "Section ID는 양수여야 합니다")
     private Long SectionId;
 
     public ApprovalVillageHeadRequestDto(Long id, String userId, String password, String username, String bankName, String accountInfo, MultipartFile identificationPhoto, MultipartFile contractFile, MultipartFile bankbookPhoto, Long SectionId) {
