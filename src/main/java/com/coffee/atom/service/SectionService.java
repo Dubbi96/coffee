@@ -88,6 +88,7 @@ public class SectionService {
         for (AppUser user : dependentUsers) {
             user.updateSection(null);
         }
+        appUserRepository.flush();
 
         sectionRepository.deleteById(sectionId);
     }

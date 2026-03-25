@@ -483,6 +483,7 @@ public class ApprovalService {
                     for (AppUser user : dependentUsers) {
                         user.updateSection(null);
                     }
+                    appUserRepository.flush();
 
                     sectionRepository.deleteById(id);
                 }
@@ -554,6 +555,7 @@ public class ApprovalService {
                         for (AppUser user : dependentUsers) {
                             user.updateSection(null);
                         }
+                        appUserRepository.flush();
                     });
                     sectionRepository.deleteById(id);
                 }

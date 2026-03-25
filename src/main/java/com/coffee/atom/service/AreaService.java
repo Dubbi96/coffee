@@ -193,6 +193,9 @@ public class AreaService {
             }
         }
 
+        // FK 참조 해제를 DB에 먼저 반영한 후 cascade 삭제 실행
+        appUserRepository.flush();
+
         areaRepository.delete(area);
     }
 }
